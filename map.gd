@@ -6,6 +6,16 @@ extends Node
 @onready var tilemap : TileMapLayer = $TileMap
 @onready var noise := FastNoiseLite.new()
 
+# ----- DAY / NIGHT SETTINGS -----
+enum TimeOfDay { DAY, NIGHT }
+
+@export var start_random_time := true
+@export var day_color  : Color = Color(1, 1, 1, 1)
+@export var night_color: Color = Color(0.3, 0.3, 0.5, 1)
+
+var current_time : TimeOfDay
+
+
 const SRC := 0  # atlas source id
 
 const GRASS = Vector2i(0, 0)
@@ -19,6 +29,18 @@ const MAGMA = Vector2i(2, 1)
 const WATER = Vector2i(3, 1)
 
 func _ready():
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	noise.frequency = 0.008
+	noise.seed = randi()
+
+	if start_random_time:
+		current_time = TimeOfDay.DAY if randf() > 0.5 else TimeOfDay.NIGHT
+	else:
+		current_time = TimeOfDay.DAY
+
+	generate_world()
+	apply_time_of_day()
+
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX
 	noise.frequency = 0.008
 	noise.seed = randi()
@@ -85,3 +107,10 @@ func generate_world():
 	# Tiny but readable
 	place_patches(MUD, 0.55, 0.025)
 	place_patches(CLAY, 0.6, 0.028)
+	
+func apply_time_of_day():
+	match current_time:
+		TimeOfDay.DAY:
+			tilemap.modulate = day_color
+		TimeOfDay.NIGHT:
+			tilemap.modulate = night_color
