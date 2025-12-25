@@ -18,7 +18,7 @@ spread = 5.0
 gravity = Vector2(0, 1200)
 initial_velocity_min = 250.0
 initial_velocity_max = 350.0
-scale_amount_min = 0.4
+scale_amount_max = 1.8
 anim_speed_min = 200.0
 anim_speed_max = 300.0
 
@@ -34,6 +34,7 @@ spread = 8.0
 gravity = Vector2(0, 1600)
 initial_velocity_min = 500.0
 initial_velocity_max = 750.0
-scale_amount_min = 0.8
+scale_amount_min = 1.5
+scale_amount_max = 2.0
 anim_speed_min = 500.0
 anim_speed_max = 700.0
