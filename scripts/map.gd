@@ -12,6 +12,9 @@ extends Node2D
 @onready var hearts: HeartSystem = $HeartSystem
 
 var score_label: Label
+var death_overlay: CanvasLayer
+var death_label: Label
+var death_bg: ColorRect
 
 # ================= TILE INFO =================
 const TILE_NAMES := {
@@ -40,7 +43,10 @@ var bubble_container: HBoxContainer
 var bubble_timer: Timer
 
 # ================= TILE DAMAGE COOLDOWN =================
-const TILE_DAMAGE_INTERVAL := 2.5
+var drown_damage_timer: Timer
+
+const DAMAGE_INTERVAL := 2.0
+const TILE_DAMAGE_INTERVAL := DAMAGE_INTERVAL
 var can_take_tile_damage := true
 var tile_damage_timer: Timer
 
@@ -50,13 +56,20 @@ func _ready():
 	lighting.spawn_lava_lights()
 	time.init_time()
 	spawner.spawn_on_nearest_grass()
+	
 
 	create_tile_info_ui()
 	create_bubble_ui()
 	create_bubble_timer()
+	create_drown_damage_timer()
 	create_tile_damage_timer()
-	
 	create_score_ui()
+
+
+	hearts.connect("player_died", _on_player_died)
+	create_death_overlay()
+
+
 
 # ==================================================
 func _process(_delta):
@@ -129,10 +142,22 @@ func position_bubbles():
 # ==================================================
 func create_bubble_timer():
 	bubble_timer = Timer.new()
-	bubble_timer.wait_time = 1.0
+	bubble_timer.wait_time = 1.0   # bubbles drop every 1 sec
 	bubble_timer.autostart = false
 	bubble_timer.timeout.connect(_on_bubble_tick)
 	add_child(bubble_timer)
+
+
+func create_drown_damage_timer():
+	drown_damage_timer = Timer.new()
+	drown_damage_timer.wait_time = DAMAGE_INTERVAL # 2 seconds
+	drown_damage_timer.autostart = false
+	drown_damage_timer.timeout.connect(func():
+		if in_water and bubbles_left <= 0:
+			hearts.damage(1)
+	)
+	add_child(drown_damage_timer)
+
 
 # ==================================================
 # TILE DAMAGE TIMER
@@ -183,12 +208,15 @@ func enter_water():
 	update_bubbles()
 	bubble_timer.start()
 
+
 func exit_water():
 	in_water = false
-	player.in_water = false 
+	player.in_water = false
 	bubble_timer.stop()
+	drown_damage_timer.stop()
 	bubble_container.visible = false
 	bubbles_left = MAX_BUBBLES
+
 
 # ==================================================
 # BUBBLE TICK
@@ -200,9 +228,11 @@ func _on_bubble_tick():
 	if bubbles_left > 0:
 		bubbles_left -= 1
 		update_bubbles()
-	else:
-		# drowning damage (already timed)
-		hearts.damage(1)
+
+		# start drowning once bubbles end
+		if bubbles_left == 0:
+			drown_damage_timer.start()
+
 
 func update_bubbles():
 	for i in range(bubble_container.get_child_count()):
@@ -252,6 +282,79 @@ func update_score_label():
 func add_score(amount: int):
 	Global.add_score(amount)
 	update_score_label()
+
+func _on_player_died():
+	var messages = [
+		"💙 You tried your best!",
+		"🌊 The world was tough today!",
+		"🔥 Nice run, adventurer!",
+		"✨ You'll do even better next time!"
+	]
+
+	death_label.text = "%s\nScore: %d" % [
+		messages.pick_random(),
+		Global.score
+	]
+
+	death_overlay.visible = true
+
+	# reset alpha
+	death_bg.modulate.a = 0.0
+	death_label.modulate.a = 0.0
+
+	# fade in overlay
+	var tween := create_tween()
+	tween.tween_property(death_bg, "modulate:a", 0.65, 0.4)
+	tween.parallel().tween_property(death_label, "modulate:a", 1.0, 0.4)
+
+	# wait 2 seconds (scene NOT paused)
+	await get_tree().create_timer(5.0).timeout
+
+	get_tree().change_scene_to_file("res://HomeScreen.tscn")
+
+
+func create_death_overlay():
+	death_overlay = CanvasLayer.new()
+	add_child(death_overlay)
+
+	# Capture screen
+	var backbuffer := BackBufferCopy.new()
+	backbuffer.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	death_overlay.add_child(backbuffer)
+
+	# Blur layer
+	death_bg = ColorRect.new()
+	death_bg.anchor_left = 0
+	death_bg.anchor_top = 0
+	death_bg.anchor_right = 1
+	death_bg.anchor_bottom = 1
+
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/screen_blur.gdshader")
+	mat.set_shader_parameter("blur_strength", 3.0)
+	death_bg.material = mat
+
+	death_overlay.add_child(death_bg)
+
+	# Message label
+	death_label = Label.new()
+	death_label.anchor_left = 0.5
+	death_label.anchor_top = 0.5
+	death_label.anchor_right = 0.5
+	death_label.anchor_bottom = 0.5
+	death_label.offset_left = -300
+	death_label.offset_top = -60
+	death_label.offset_right = 300
+	death_label.offset_bottom = 60
+	death_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	death_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	death_label.add_theme_font_override("font", load("res://Jersey10-Regular.ttf"))
+	death_label.add_theme_font_size_override("font_size", 60)
+	death_label.modulate.a = 0.0
+
+	death_overlay.add_child(death_label)
+	death_overlay.visible = false
+
 
 # ==================================================
 # TEST INPUT

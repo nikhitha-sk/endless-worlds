@@ -3,6 +3,8 @@
 extends CanvasLayer
 class_name HeartSystem
 
+signal player_died
+
 @export var max_hearts := 5
 @export var heart_size := 40
 @export var spacing := 6
@@ -78,7 +80,7 @@ func damage(amount := 1):
 		)
 
 	if current_hearts == 0:
-		player_died()
+		_emit_player_died()
 
 
 func heal(amount := 1):
@@ -96,5 +98,5 @@ func heal(amount := 1):
 		current_hearts += 1
 
 
-func player_died():
-	print("Player died!")
+func _emit_player_died():
+	emit_signal("player_died")

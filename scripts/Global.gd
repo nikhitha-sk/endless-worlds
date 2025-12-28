@@ -1,8 +1,11 @@
-# Global.gd
+# Global.gd (autoload)
 extends Node
 
 var score: int = 0
 var high_score: int = 0
+
+func reset_score():
+	score = 0
 
 func add_score(amount: int):
 	score += amount
