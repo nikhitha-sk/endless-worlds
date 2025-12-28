@@ -37,6 +37,11 @@ var in_water := false
 var bubble_container: HBoxContainer
 var bubble_timer: Timer
 
+# ================= TILE DAMAGE COOLDOWN =================
+const TILE_DAMAGE_INTERVAL := 2.5
+var can_take_tile_damage := true
+var tile_damage_timer: Timer
+
 # ==================================================
 func _ready():
 	world.generate()
@@ -47,6 +52,7 @@ func _ready():
 	create_tile_info_ui()
 	create_bubble_ui()
 	create_bubble_timer()
+	create_tile_damage_timer()
 
 # ==================================================
 func _process(_delta):
@@ -109,6 +115,18 @@ func create_bubble_timer():
 	add_child(bubble_timer)
 
 # ==================================================
+# TILE DAMAGE TIMER
+# ==================================================
+func create_tile_damage_timer():
+	tile_damage_timer = Timer.new()
+	tile_damage_timer.wait_time = TILE_DAMAGE_INTERVAL
+	tile_damage_timer.one_shot = true
+	tile_damage_timer.timeout.connect(func():
+		can_take_tile_damage = true
+	)
+	add_child(tile_damage_timer)
+
+# ==================================================
 # TILE CHECKING
 # ==================================================
 func update_player_tile_info():
@@ -127,9 +145,12 @@ func update_player_tile_info():
 		if in_water:
 			exit_water()
 
-	# ---- DAMAGE TILES ----
+	# ---- LAVA / MAGMA DAMAGE ----
 	if atlas == LAVA_TILE or atlas == MAGMA_TILE:
-		hearts.damage(1)
+		if can_take_tile_damage:
+			hearts.damage(1)
+			can_take_tile_damage = false
+			tile_damage_timer.start()
 
 # ==================================================
 # WATER STATE
@@ -158,7 +179,7 @@ func _on_bubble_tick():
 		bubbles_left -= 1
 		update_bubbles()
 	else:
-		# bubbles empty → drowning damage
+		# drowning damage (already timed)
 		hearts.damage(1)
 
 func update_bubbles():
