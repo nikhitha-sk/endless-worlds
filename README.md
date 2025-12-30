@@ -9,4 +9,5 @@ lighting:
     shadows
 
 other biomes
-    
+    snow
+    plain
