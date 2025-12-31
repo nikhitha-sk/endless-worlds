@@ -11,5 +11,4 @@ lighting:
 other biomes
     snow
     plain
-
-    DEFAULT
+    forest
