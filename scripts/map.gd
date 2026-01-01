@@ -12,6 +12,9 @@ extends Node2D
 @onready var tilemap: TileMapLayer = $TileMap
 @onready var hearts: HeartSystem = $HeartSystem
 
+@onready var gemini: GeminiRiddle = $GeminiRiddle
+
+
 var score_label: Label
 var death_overlay: CanvasLayer
 var death_label: Label
@@ -71,7 +74,22 @@ func _ready():
 	hearts.connect("player_died", _on_player_died)
 	create_death_overlay()
 
+	# GEMINI
+	gemini.riddle_generated.connect(_on_riddle_generated)
+	gemini.generate_riddle()
+	
+	
+func _on_riddle_generated(data):
+	print("RIDDLE:", data.riddle)
+	print("HINTS:")
+	for hint in data.hints:
+		print("*", hint)
+	print("SOLUTION:", data.solution)
 
+	# You can now:
+	# - show this in UI
+	# - unlock a quest
+	# - give score reward
 
 # ==================================================
 func _process(_delta):
