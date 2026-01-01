@@ -28,6 +28,7 @@ var wells_spawned: bool = false
 # ==================================================
 @export var enable_rain: bool = true
 @export var TILE_SOURCE_ID: int = 0
+var current_solution: String = ""
 
 
 # ==================================================
@@ -134,7 +135,7 @@ func spawn_wells() -> void:
 
 		well.interact.connect(func():
 			answer_popup.open(
-				gemini.riddle_data["solution"],
+				current_solution,
 				hearts,
 				self
 			)
@@ -143,7 +144,8 @@ func spawn_wells() -> void:
 
 
 func _on_riddle_generated(data: Dictionary) -> void:
-	# Setup riddle UI (PASS FULL DICTIONARY)
+	current_solution = str(data["solution"]).strip_edges().to_lower()
+
 	riddle_ui.setup_riddle(data)
 
 	# Spawn hint pickups on map
@@ -153,7 +155,7 @@ func _on_riddle_generated(data: Dictionary) -> void:
 	print("HINTS:")
 	for hint in data["hints"]:
 		print("*", hint)
-	print("SOLUTION:", data["solution"])
+	print("SOLUTION:", current_solution)
 
 	# You can now:
 	# - show this in UI
