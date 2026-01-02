@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://dpbxblfybuwu6"]
+[gd_scene load_steps=22 format=3 uid="uid://dpbxblfybuwu6"]
 
 [ext_resource type="TileSet" uid="uid://crg0orous800e" path="res://tile_set.tres" id="1_c7s6e"]
 [ext_resource type="Script" uid="uid://b221v61dem8vf" path="res://scripts/map.gd" id="1_wijl4"]
@@ -18,6 +18,8 @@
 [ext_resource type="Script" uid="uid://crb5l7rvldjbb" path="res://scripts/riddleui/HintBulb.gd" id="14_wbpbn"]
 [ext_resource type="Texture2D" uid="uid://dvh14cywlfrfr" path="res://assets/ui/hints_bulb.png" id="15_wbpbn"]
 [ext_resource type="PackedScene" uid="uid://dpqtvtf5uxnjn" path="res://answer_popup.tscn" id="17_a6rn7"]
+[ext_resource type="Texture2D" uid="uid://dxi7du3opig45" path="res://assets/ui/riddle.png" id="17_jk4ss"]
+[ext_resource type="FontFile" uid="uid://08vndck327l2" path="res://Jersey10-Regular.ttf" id="18_r5om4"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://addons/virtual_joystick/virtual_joystick_scene.tscn" id="19_bssq0"]
 
 [node name="Map" type="Node2D"]
@@ -65,42 +67,88 @@ script = ExtResource("10_oysan")
 script = ExtResource("13_2wwcf")
 
 [node name="Panel" type="Panel" parent="RiddleUI"]
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="RiddleUI/Panel"]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="HintsColumn" type="VBoxContainer" parent="RiddleUI/Panel"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -6.0
+offset_bottom = 6.0
+grow_vertical = 2
+alignment = 1
 
-[node name="RiddleText" type="Label" parent="RiddleUI/Panel/VBoxContainer"]
+[node name="HintBulb1" type="TextureRect" parent="RiddleUI/Panel/HintsColumn"]
 layout_mode = 2
-
-[node name="HintsRow" type="HBoxContainer" parent="RiddleUI/Panel/VBoxContainer"]
-layout_mode = 2
-
-[node name="HintBulb1" type="TextureRect" parent="RiddleUI/Panel/VBoxContainer/HintsRow"]
-layout_mode = 2
+stretch_mode = 2
 script = ExtResource("14_wbpbn")
 bulb_texture = ExtResource("15_wbpbn")
 
-[node name="HintBulb2" type="TextureRect" parent="RiddleUI/Panel/VBoxContainer/HintsRow"]
+[node name="HintBulb2" type="TextureRect" parent="RiddleUI/Panel/HintsColumn"]
 layout_mode = 2
+stretch_mode = 2
 script = ExtResource("14_wbpbn")
 bulb_texture = ExtResource("15_wbpbn")
 
-[node name="HintBulb3" type="TextureRect" parent="RiddleUI/Panel/VBoxContainer/HintsRow"]
+[node name="HintBulb3" type="TextureRect" parent="RiddleUI/Panel/HintsColumn"]
 layout_mode = 2
+stretch_mode = 2
 script = ExtResource("14_wbpbn")
 bulb_texture = ExtResource("15_wbpbn")
 
-[node name="HintBulb4" type="TextureRect" parent="RiddleUI/Panel/VBoxContainer/HintsRow"]
+[node name="HintBulb4" type="TextureRect" parent="RiddleUI/Panel/HintsColumn"]
 layout_mode = 2
+stretch_mode = 2
 script = ExtResource("14_wbpbn")
 bulb_texture = ExtResource("15_wbpbn")
 
-[node name="HintTooltip" type="Label" parent="RiddleUI/Panel/VBoxContainer"]
-layout_mode = 2
+[node name="RiddleToggle" type="TextureButton" parent="RiddleUI/Panel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -89.0
+offset_top = -40.0
+offset_right = 91.0
+offset_bottom = 140.0
+grow_horizontal = 2
+scale = Vector2(0.4, 0.4)
+pivot_offset = Vector2(90, 90)
+texture_normal = ExtResource("17_jk4ss")
+
+[node name="RiddleText" type="Label" parent="RiddleUI/Panel"]
+layout_direction = 1
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -70.0
+offset_top = 100.0
+offset_right = 70.0
+offset_bottom = 123.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("18_r5om4")
+theme_override_font_sizes/font_size = 25
+text = "XXXXXXXXXXXXXX"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HintTooltip" type="Label" parent="RiddleUI/Panel"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -11.5
+offset_right = 1.0
+offset_bottom = 11.5
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("18_r5om4")
+theme_override_font_sizes/font_size = 25
 
 [node name="Tasks" parent="." instance=ExtResource("13_6qsgm")]
 spawn_radius = 100.0
