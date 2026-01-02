@@ -385,6 +385,8 @@ func _on_player_died():
 	var tween := create_tween()
 	tween.tween_property(death_bg, "modulate:a", 0.65, 0.4)
 	tween.parallel().tween_property(death_label, "modulate:a", 1.0, 0.4)
+	#RESET SCORE
+	Global.reset_score_only()
 
 	await get_tree().create_timer(5.0).timeout
 	get_tree().change_scene_to_file("res://HomeScreen.tscn")

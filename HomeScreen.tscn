@@ -93,6 +93,12 @@ theme_override_fonts/font = ExtResource("2_ksj1l")
 theme_override_font_sizes/font_size = 28
 text = "⭐ Score: 0"
 
+[node name="LevelLabel" type="Label" parent="PlayerPanel/StatsVBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_ksj1l")
+theme_override_font_sizes/font_size = 28
+text = "Level: 1"
+
 [node name="HighScoreLabel" type="Label" parent="PlayerPanel/StatsVBox"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_ksj1l")

@@ -12,7 +12,9 @@ var map_ref
 func _ready():
 	visible = false
 	submit.pressed.connect(_on_submit)
-	input.text_submitted.connect(func(_t): _on_submit())
+
+	# 🚫 Prevent Enter key from submitting
+	input.gui_input.connect(_block_enter_key)
 
 # =============================
 # OPEN POPUP
@@ -30,6 +32,14 @@ func open(solution: String, heart_system: HeartSystem, map):
 	map_ref = map
 
 	input.grab_focus()
+
+# =============================
+# BLOCK ENTER KEY
+# =============================
+func _block_enter_key(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			get_viewport().set_input_as_handled()
 
 # =============================
 # ESC TO CLOSE
@@ -56,9 +66,16 @@ func _on_submit():
 
 	if user_answer == correct_answer:
 		message.text = "🎉 VICTORY!"
-		map_ref.add_score(50)
+		
+		Global.add_score(50)
+		Global.next_level()   # ⭐ LEVEL UP
+		
 		await get_tree().create_timer(1.5).timeout
 		close()
+		
+		# 🏠 GO BACK TO HOME
+		get_tree().change_scene_to_file("res://HomeScreen.tscn")
+
 	else:
 		message.text = "❌ Try again"
 		hearts.damage(1)
