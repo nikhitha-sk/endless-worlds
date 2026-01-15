@@ -11,6 +11,8 @@ const GRASS: Vector2i = Vector2i(0, 0)
 const TOTAL_TREES: int = 20
 const TREE_TYPES: int = 4
 const TREE_PATH: String = "res://assets/trees/"
+# Added the texture preload for the blur effect
+const SHADOW_TEX = preload("res://assets/glow.png")
 
 # ==================================================
 # TREE SPAWNER
@@ -51,23 +53,19 @@ func spawn_trees() -> void:
 		tree.rotation = randf_range(-0.05, 0.05)
 		tree.z_index = int(tree.global_position.y / 4.0)
 
-		# --------- ELLIPSE SHADOW GENERATION ---------
-		var shadow := Polygon2D.new()
-		var shadow_points := PackedVector2Array()
-		var steps := 32
-		var radius_x : float = tex.get_width() * 0.4 # Adjust width of shadow
-		var radius_y : float = radius_x * 0.4        # Flatten it into an ellipse
+		# --------- TEXTURE SHADOW (Applying Blur Logic) ---------
+		var shadow := Sprite2D.new()
+		shadow.texture = SHADOW_TEX
+		shadow.modulate = Color(0, 0, 0, 0.2) # Reduced opacity
+		shadow.show_behind_parent = true
+		shadow.z_index = -1
 		
-		for j in range(steps):
-			var angle = j * PI * 2 / steps
-			shadow_points.append(Vector2(cos(angle) * radius_x, sin(angle) * radius_y))
+		# Reduced size logic
+		var shadow_scale_x = (tex.get_width() / float(SHADOW_TEX.get_width())) * 1.1
+		shadow.scale = Vector2(shadow_scale_x, shadow_scale_x * 0.3)
 		
-		shadow.polygon = shadow_points
-		shadow.color = Color(0, 0, 0, 0.3) # Semi-transparent black
-		shadow.show_behind_parent = true   # Puts shadow under the tree sprite
-		
-		# Position shadow at the "feet" of the tree
-		shadow.position = Vector2(0, 5) 
+		# Positioned at the base
+		shadow.position = Vector2(0, 7) 
 		tree.add_child(shadow)
 
 		# --------- HITBOX GENERATION (Trunk Only) ---------
@@ -87,30 +85,15 @@ func spawn_trees() -> void:
 		var polygons = bitmap.opaque_to_polygons(Rect2i(0, 0, img_w, scan_height), 2.0)
 		
 		var static_body := StaticBody2D.new()
-		# Position the body at the start of the scan region relative to the sprite offset
-		static_body.position = tree.offset + Vector2(0, img_h - scan_height+30)
+		# Logic kept from second script: +30 Y offset
+		static_body.position = tree.offset + Vector2(0, img_h - scan_height + 30)
 		
 		for poly in polygons:
 			var collision_poly = CollisionPolygon2D.new()
 			collision_poly.polygon = poly
 			static_body.add_child(collision_poly)
 
-			## --- DEBUG VISUAL (Optional: Remove in production) ---
-			#var debug_line = Line2D.new()
-			#var closed_poly = Array(poly)
-			#closed_poly.append(poly[0]) # Close the loop
-			#debug_line.points = PackedVector2Array(closed_poly)
-			#debug_line.width = 1.0
-			#debug_line.default_color = Color(1, 0, 0, 1) # Semi-transparent red
-			#
-			## Move the line up by 30 pixels
-			#debug_line.position.y -= 30 
-			#
-			#collision_poly.add_child(debug_line)
-
 		add_child(tree)
-
-
 		tree.add_child(static_body)
 
 # ==================================================
