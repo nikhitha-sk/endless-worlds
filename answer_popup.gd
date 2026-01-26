@@ -85,7 +85,7 @@ func _on_submit():
 		spawn_confetti()
 		message.text = "🎉 VICTORY!"
 
-		Global.add_score(50)
+		Global.add_score(30)
 		Global.next_level()
 
 		await get_tree().create_timer(1.5).timeout
@@ -94,7 +94,8 @@ func _on_submit():
 	else:
 		$"../DifficultyRL".give_feedback(false, Global.current_hint_count)
 		message.text = "❌ Wrong Answer"
-		hearts.damage(1)
+		Global.add_score(-10)
+		hearts.damage(2)
 		await get_tree().create_timer(1.0).timeout
 		close()
 

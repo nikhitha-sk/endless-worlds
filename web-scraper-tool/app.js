@@ -20,25 +20,50 @@ async function scrapeUniversal(topic) {
     try {
         fs.writeFileSync(DEBUG_FILE, `--- SCRAPE LOG FOR TOPIC: ${topic} ---\n\n`, 'utf8');
 
-        // Use DuckDuckGo HTML for better scraping compatibility
-        const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(topic + " quiz questions and answers")}`;
-        console.log(`\n--- Searching for: ${topic} ---`);
+        // // Use DuckDuckGo HTML for better scraping compatibility
+        // const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(topic + " quiz questions and answers")}`;
+        // console.log(`\n--- Searching for: ${topic} ---`);
 
-        const { data: searchHtml } = await axios.get(searchUrl, {
-            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
-            timeout: 5000
+        // const { data: searchHtml } = await axios.get(searchUrl, {
+        //     headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+        //     timeout: 5000
+        // });
+
+        // const $search = cheerio.load(searchHtml);
+        // let targetUrl = '';
+
+        // $search('.result__a').each((i, el) => {
+        //     const href = $search(el).attr('href');
+        //     if (href && !targetUrl) {
+        //         const match = href.match(/uddg=([^&]+)/);
+        //         targetUrl = match ? decodeURIComponent(match[1]) : href;
+        //     }
+        // });
+
+
+
+
+        console.log(`\n--- Searching Serper.dev for: ${topic} ---`);
+        
+        // 1. Get search results from Serper
+        const searchResponse = await axios.request({
+            method: 'post',
+            url: 'https://google.serper.dev/search',
+            headers: { 
+                'X-API-KEY': process.env.SERPER_API_KEY, 
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                "q": `${topic} quiz questions and answers`
+            })
         });
 
-        const $search = cheerio.load(searchHtml);
-        let targetUrl = '';
+        // Get the first organic result link
+        const targetUrl = searchResponse.data.organic?.[0]?.link;
 
-        $search('.result__a').each((i, el) => {
-            const href = $search(el).attr('href');
-            if (href && !targetUrl) {
-                const match = href.match(/uddg=([^&]+)/);
-                targetUrl = match ? decodeURIComponent(match[1]) : href;
-            }
-        });
+
+
+        ///////////
 
         if (!targetUrl) throw new Error("No search results found.");
 
@@ -46,7 +71,7 @@ async function scrapeUniversal(topic) {
         fs.appendFileSync(DEBUG_FILE, `SOURCE URL: ${targetUrl}\n\n`);
 
         const { data: pageHtml } = await axios.get(targetUrl, {
-            headers: { "User-Agent": "Mozilla/5.0" },
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
             timeout: 5000
         });
 
@@ -92,6 +117,10 @@ app.post('/generate-riddle', async (req, res) => {
         3. Generate 4 "options" for the user to choose from.
         4. CRITICAL: The "solution" MUST be exactly one of the items in the "options" array.
         5. Difficulty: ${difficulty}.
+        6. Provide 4 hints exactly.
+        7. Topic is given by user so dont make answer as topic itself
+        8. insert a new line if the question is longer than 10 words
+        9. keep question length less than 50 words
         
         OUTPUT STRICT JSON:
         {

@@ -144,6 +144,8 @@ func reset_score_only():
 
 func add_score(amount: int):
 	score += amount
+	if(score<0):
+		score=0
 	if score > high_score:
 		high_score = score
 

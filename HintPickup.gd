@@ -7,5 +7,6 @@ func _ready():
 
 func _on_body_entered(body):
 	if body.name == "Player":
+		Global.add_score(-2)
 		emit_signal("collected")
 		queue_free()
