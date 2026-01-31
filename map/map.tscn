@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3 uid="uid://dpbxblfybuwu6"]
+[gd_scene load_steps=35 format=3 uid="uid://dpbxblfybuwu6"]
 
 [ext_resource type="Script" uid="uid://b221v61dem8vf" path="res://map/map.gd" id="1_iqbtl"]
 [ext_resource type="PackedScene" uid="uid://olx1k0r0di2" path="res://player.tscn" id="2_81obp"]
@@ -28,6 +28,7 @@
 [ext_resource type="Script" uid="uid://cmudss7wct5ar" path="res://ambience/ambience_manager.gd" id="26_wwcqt"]
 [ext_resource type="Shader" uid="uid://cknrdgjupfm8k" path="res://shaders/fog.gdshader" id="27_ofiht"]
 [ext_resource type="Texture2D" uid="uid://b1av43xq2q0du" path="res://shaders/fog_noise.tres" id="28_05mli"]
+[ext_resource type="Script" uid="uid://b3f6mifxj7emx" path="res://map/firefly_manager.gd" id="29_de6fw"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_r5om4"]
 
@@ -255,3 +256,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="FireflyLayer" type="Node2D" parent="FogLayer"]
+scale = Vector2(2, 2)
+script = ExtResource("29_de6fw")
