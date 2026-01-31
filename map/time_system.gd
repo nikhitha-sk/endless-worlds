@@ -1,5 +1,6 @@
 extends Node
 @onready var jersey_font: FontFile = load("res://Jersey10-Regular.ttf")
+@onready var fog_rect: ColorRect = get_node("../FogLayer/FogRect")
 
 # ---------------- DAY / NIGHT ----------------
 enum TimeOfDay { DAY, NIGHT }
@@ -47,6 +48,32 @@ func init_time():
 	create_clock_ui()
 	update_time_state()
 	update_clock_text()
+	
+	fog_rect.visible = true
+	fog_rect.modulate.a = 0.0
+
+func update_morning_fog(delta: float):
+	var time_float := game_hour + game_minute / 60.0
+
+	# Fog window: 5AM → 8AM
+	var fog_start := 5.0
+	var fog_end := 8.0
+
+	var target_alpha := 0.0
+
+	if time_float >= fog_start and time_float <= fog_end:
+		# fade in quickly from 5-5:30
+		if time_float < 5.5:
+			target_alpha = remap(time_float, 5.0, 5.5, 0.0, 0.35)
+		# fog strongest between 5:30-7:30
+		elif time_float <= 7.5:
+			target_alpha = 0.35
+		# fade out 7:30-8
+		else:
+			target_alpha = remap(time_float, 7.5, 8.0, 0.35, 0.0)
+
+	# smooth transition
+	fog_rect.modulate.a = lerp(fog_rect.modulate.a, target_alpha, 3.0 * delta)
 
 # ==================================================
 # PROCESS
@@ -65,6 +92,8 @@ func _process(delta):
 
 	get_parent().modulate = current_light_color
 	update_flower_lighting()
+	update_morning_fog(delta)
+
 
 # ==================================================
 # FLOWER LIGHTING

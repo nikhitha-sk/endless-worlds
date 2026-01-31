@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3 uid="uid://dpbxblfybuwu6"]
+[gd_scene load_steps=35 format=3 uid="uid://dpbxblfybuwu6"]
 
 [ext_resource type="Script" uid="uid://b221v61dem8vf" path="res://map/map.gd" id="1_iqbtl"]
 [ext_resource type="PackedScene" uid="uid://olx1k0r0di2" path="res://player.tscn" id="2_81obp"]
@@ -25,6 +25,10 @@
 [ext_resource type="PackedScene" uid="uid://qlpy3iu78nw2" path="res://joy_stick_ui.tscn" id="22_d6tlw"]
 [ext_resource type="PackedScene" uid="uid://clivw5ge2vyc" path="res://tutorialscene/TutorialButton.tscn" id="23_kkght"]
 [ext_resource type="Script" uid="uid://b3yik852ctwld" path="res://map/rl_overlay.gd" id="25_gw5x3"]
+[ext_resource type="Script" uid="uid://cmudss7wct5ar" path="res://ambience/ambience_manager.gd" id="26_wwcqt"]
+[ext_resource type="Shader" uid="uid://cknrdgjupfm8k" path="res://shaders/fog.gdshader" id="27_ofiht"]
+[ext_resource type="Texture2D" uid="uid://b1av43xq2q0du" path="res://shaders/fog_noise.tres" id="28_05mli"]
+[ext_resource type="Script" uid="uid://b3f6mifxj7emx" path="res://map/firefly_manager.gd" id="29_de6fw"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_r5om4"]
 
@@ -43,6 +47,12 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_4sf5t"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_05mli"]
+shader = ExtResource("27_ofiht")
+shader_parameter/noise_texture = ExtResource("28_05mli")
+shader_parameter/density = 0.25
+shader_parameter/speed = Vector2(0.02, 0.01)
 
 [node name="Map" type="Node2D"]
 scale = Vector2(2, 2)
@@ -229,3 +239,24 @@ layout_mode = 2
 
 [node name="QText" type="Label" parent="RLOverlay/Panel/VBox"]
 layout_mode = 2
+
+[node name="AmbiencePlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="AmbienceManager" type="Node" parent="."]
+script = ExtResource("26_wwcqt")
+
+[node name="FogLayer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="FogRect" type="ColorRect" parent="FogLayer"]
+material = SubResource("ShaderMaterial_05mli")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="FireflyLayer" type="Node2D" parent="FogLayer"]
+scale = Vector2(2, 2)
+script = ExtResource("29_de6fw")
