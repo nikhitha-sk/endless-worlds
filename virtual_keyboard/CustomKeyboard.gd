@@ -6,7 +6,6 @@ signal backspace_pressed
 signal enter_pressed
 
 @onready var main_vbox = VBoxContainer.new()
-# Update this path if you move the file within your Godot project res:// folder
 const FONT_PATH = "res://Jersey10-Regular.ttf" 
 
 const ALPHA_ROWS = [
@@ -17,6 +16,14 @@ const ALPHA_ROWS = [
 ]
 
 func _ready():
+	# --- SCREEN SIZING LOGIC ---
+	var screen_width = get_viewport_rect().size.x
+	# Set max width to half of screen
+	custom_minimum_size.x = screen_width / 2
+	
+	# Center the keyboard horizontally
+	size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	
 	# Tray Background
 	var tray_style = StyleBoxFlat.new()
 	tray_style.bg_color = Color(0, 0, 0, 0.2)
@@ -24,6 +31,8 @@ func _ready():
 	
 	main_vbox.add_theme_constant_override("separation", 3)
 	main_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# Ensure the internal vbox fills the constrained width
+	main_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(main_vbox)
 	
 	_build_number_row()
@@ -55,8 +64,6 @@ func _build_alpha_rows():
 func _create_key_button(txt: String) -> Button:
 	var btn = Button.new()
 	btn.text = txt
-	
-	# --- DISABLE WASD/ARROW NAVIGATION ---
 	btn.focus_mode = Control.FOCUS_NONE
 	
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -79,7 +86,7 @@ func _create_key_button(txt: String) -> Button:
 	style.border_color = Color(1, 1, 1, 0.05)
 	
 	btn.add_theme_stylebox_override("normal", style)
-	btn.add_theme_stylebox_override("hover", style) # Keep same look on hover
+	btn.add_theme_stylebox_override("hover", style)
 	btn.add_theme_stylebox_override("pressed", style)
 	btn.add_theme_font_size_override("font_size", 20)
 	
