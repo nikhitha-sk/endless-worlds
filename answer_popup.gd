@@ -20,6 +20,7 @@ const COLOR_EMPTY = Color("3a3a3c")   # Dark Gray Border
 @onready var message: Label = $Panel/VBoxContainer/MessageLabel
 @onready var submit: Button = $Panel/VBoxContainer/SubmitButton
 @onready var close_button: Button = $Panel/CloseButton
+@onready var question_label: Label = $Panel/VBoxContainer/QuestionLabel
 
 @onready var victory_sound: AudioStreamPlayer = $VictorySound
 @onready var gameover_sound: AudioStreamPlayer = $GameOverSound
@@ -39,6 +40,7 @@ const COLOR_EMPTY = Color("3a3a3c")   # Dark Gray Border
 
 var correct_answer := ""
 var selected_answer := ""
+var current_question := ""
 var popup_type: Global.QuestionType
 var hearts: HeartSystem
 var map_ref
@@ -79,17 +81,19 @@ func _ready():
 
 func _on_custom_key_pressed(chars: String):
 	# Update LineEdit for Fill-in-the-blank
-	answer_input.text += chars
-	answer_input.caret_column = answer_input.text.length()
+	if popup_type == Global.QuestionType.FILL_BLANK:
+		answer_input.text += chars
+		answer_input.caret_column = answer_input.text.length()
 	
 	# Update Wordle Grid
 	if popup_type == Global.QuestionType.WORDLE:
 		_handle_wordle_input(chars)
 
 func _on_custom_backspace():
-	# Backspace for LineEdit
-	if answer_input.text.length() > 0:
-		answer_input.text = answer_input.text.left(-1)
+	# Backspace for LineEdit (fill-in-the-blank)
+	if popup_type == Global.QuestionType.FILL_BLANK:
+		if answer_input.text.length() > 0:
+			answer_input.text = answer_input.text.left(-1)
 	
 	# Backspace for Wordle
 	if popup_type == Global.QuestionType.WORDLE and current_col > 0:
@@ -102,22 +106,23 @@ func _on_custom_backspace():
 # Shared logic for Wordle input (triggered by PC or Custom Buttons)
 func _handle_wordle_input(chars: String):
 	if current_row >= max_attempts: return
-	if current_col < correct_answer.length():
-		var box = boxes[current_row][current_col]
-		box.get_child(0).text = chars.to_upper()
-		
-		# Animation
-		var tween = create_tween()
-		tween.tween_property(box, "scale", Vector2(1.1, 1.1), 0.05)
-		tween.tween_property(box, "scale", Vector2(1.0, 1.0), 0.05)
-		current_col += 1
+	if current_col >= correct_answer.length(): return  # Prevent writing beyond word length
+	
+	var box = boxes[current_row][current_col]
+	box.get_child(0).text = chars.to_upper()
+	
+	# Animation
+	var tween = create_tween()
+	tween.tween_property(box, "scale", Vector2(1.1, 1.1), 0.05)
+	tween.tween_property(box, "scale", Vector2(1.0, 1.0), 0.05)
+	current_col += 1
 
 		
 		
 # =============================
 # OPEN POPUP WITH MCQs
 # =============================
-func open(solution: String, options: Array, heart_system: HeartSystem, map):
+func open(solution: String, options: Array, heart_system: HeartSystem, map, question: String = ""):
 	if solution.is_empty():
 		push_error("❌ Empty correct answer")
 		return
@@ -128,15 +133,20 @@ func open(solution: String, options: Array, heart_system: HeartSystem, map):
 	# This ensures that mouse clicks don't go through the panel
 	$Panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	
-	# Optional: If you want to stop the player from moving/processing logic
-	# get_tree().paused = true # Uncomment if your game supports pausing
-	
 	hearts = heart_system
 	map_ref = map
 	correct_answer = solution.to_lower()
 	selected_answer = ""
+	current_question = question
 
 	_hide_all_popups()
+	
+	# Display question at the top if provided
+	if question_label and not question.is_empty():
+		question_label.text = question
+		question_label.visible = true
+	elif question_label:
+		question_label.visible = false
 	
 	popup_type = Global.current_question_type
 
@@ -149,13 +159,14 @@ func open(solution: String, options: Array, heart_system: HeartSystem, map):
 			_open_wordle()
 
 func close():
-	# --- RESTORE BACKGROUND INPUT ---
-	# get_tree().paused = false # Uncomment if you used the pause method
-	
 	_hide_all_popups()
 	visible = false
 	selected_answer = ""
 	message.text = ""
+	
+	# Hide question label
+	if question_label:
+		question_label.visible = false
 
 	for btn in option_buttons:
 		btn.modulate = Color.WHITE
@@ -168,10 +179,7 @@ func _unhandled_input(event):
 	# Stop the event from reaching nodes behind this popup
 	get_viewport().set_input_as_handled()
 	
-	# Only process if Wordle is active
-	if Global.current_question_type != Global.QuestionType.WORDLE: return
-	if current_row >= max_attempts: return
-	
+	# Handle keyboard input for both WORDLE and FILL_BLANK
 	if event is InputEventKey and event.pressed:
 		var key_text = ""
 		
@@ -190,8 +198,8 @@ func _unhandled_input(event):
 			if key_text != "":
 				_on_custom_key_pressed(key_text)
 		
-		# TRIGGER THE COOL ANIMATION
-		if keyboard and key_text != "":
+		# TRIGGER THE COOL ANIMATION (only for Wordle keyboard)
+		if keyboard and key_text != "" and Global.current_question_type == Global.QuestionType.WORDLE:
 			keyboard.animate_key_press(key_text)
 
 func _build_wordle_grid():
@@ -261,7 +269,8 @@ func _open_fill_blank():
 	message.text = "Fill in the correct answer"
 	fill_container.visible = true
 	if keyboard: keyboard.visible = true # NEW: Show for Fill Blank
-	answer_input.grab_focus()
+	answer_input.visible = true
+	# Don't grab focus - we handle keyboard input in _unhandled_input
 
 func _open_wordle():
 	message.text = "Guess the word"
