@@ -50,9 +50,7 @@ var whack_active := false
 @onready var wordlock_container: HBoxContainer = $Panel/VBoxContainer/WordLockContainer
 
 # WordLock constants
-const COLOR_WORDLOCK_SELECTED = Color(1.0, 0.714, 0.757)  # baby pink
 const WORDLOCK_LABEL_H := 60
-const WORDLOCK_CLIP_H := 180
 const WORDLOCK_COL_W := 70
 const WORDLOCK_FONT = preload("res://Jersey10-Regular.ttf")
 
@@ -442,6 +440,32 @@ func _build_wordle_grid():
 			row_boxes.append(panel)
 		boxes.append(row_boxes)
 		
+func _apply_wordlock_btn_style(btn: Button, style: StyleBoxFlat) -> void:
+	btn.add_theme_stylebox_override("normal",  style)
+	btn.add_theme_stylebox_override("hover",   style)
+	btn.add_theme_stylebox_override("pressed", style)
+
+func _make_wordlock_tile_style(selected: bool) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.corner_radius_top_left    = 12
+	s.corner_radius_top_right   = 12
+	s.corner_radius_bottom_right = 12
+	s.corner_radius_bottom_left  = 12
+	if selected:
+		s.bg_color     = Color(1.0, 0.18, 0.82)       # bright pink
+		s.border_width_left   = 3
+		s.border_width_top    = 3
+		s.border_width_right  = 3
+		s.border_width_bottom = 3
+		s.border_color  = Color(0.55, 0.0, 1.0)       # bright purple border
+		s.shadow_color  = Color(0.55, 0.0, 1.0, 0.85) # bright purple glow
+		s.shadow_size   = 8
+	else:
+		s.bg_color     = Color(0.72, 0.72, 0.76)       # light gray
+		s.shadow_color = Color(1.0, 1.0, 1.0, 0.12)   # subtle highlight glow
+		s.shadow_size  = 3
+	return s
+
 func _open_wordlock():
 	message.text = "Select the correct characters"
 	wordlock_container.visible = true
@@ -459,7 +483,7 @@ func _build_wordlock_columns():
 	for col_idx in word.length():
 		var correct_char := word[col_idx]
 
-		var count := randi_range(3, 6)
+		var count := randi_range(2, 4)
 		var chars: Array[String] = [correct_char]
 		while chars.size() < count:
 			var c := alphabet[randi() % alphabet.length()]
@@ -467,20 +491,9 @@ func _build_wordlock_columns():
 				chars.append(c)
 		chars.shuffle()
 
-		# Clip container (hides content outside visible area)
-		var clip := Control.new()
-		clip.clip_contents = true
-		clip.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_CLIP_H)
-
-		# VBoxContainer scrolled inside the clip
-		var charlist := VBoxContainer.new()
-		charlist.add_theme_constant_override("separation", 0)
-		clip.add_child(charlist)
-
-		# Top padding so first/last chars can scroll to center
-		var pad_top := Control.new()
-		pad_top.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_LABEL_H)
-		charlist.add_child(pad_top)
+		# Column of tiles — no clip, all characters visible
+		var col_box := VBoxContainer.new()
+		col_box.add_theme_constant_override("separation", 8)
 
 		var char_labels: Array = []
 		for i in chars.size():
@@ -488,49 +501,38 @@ func _build_wordlock_columns():
 			btn.text = chars[i]
 			btn.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_LABEL_H)
 			btn.focus_mode = Control.FOCUS_NONE
-			btn.flat = true
 			btn.add_theme_font_size_override("font_size", 30)
 			btn.add_theme_font_override("font", WORDLOCK_FONT)
-			if i == 0:
-				btn.add_theme_color_override("font_color", COLOR_WORDLOCK_SELECTED)
-			else:
-				btn.add_theme_color_override("font_color", Color.WHITE)
+			btn.add_theme_color_override("font_color",         Color.WHITE)
+			btn.add_theme_color_override("font_hover_color",   Color.WHITE)
+			btn.add_theme_color_override("font_pressed_color", Color.WHITE)
+			var style := _make_wordlock_tile_style(i == 0)
+			_apply_wordlock_btn_style(btn, style)
 			btn.pressed.connect(_on_wordlock_char_selected.bind(col_idx, i))
-			charlist.add_child(btn)
+			col_box.add_child(btn)
 			char_labels.append(btn)
 
-		# Bottom padding
-		var pad_bot := Control.new()
-		pad_bot.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_LABEL_H)
-		charlist.add_child(pad_bot)
-
-		wordlock_container.add_child(clip)
+		wordlock_container.add_child(col_box)
 		wordlock_selected_chars.append(chars[0].to_lower())
 		wordlock_columns.append({
-			"charlist": charlist,
-			"labels": char_labels,
+			"labels":       char_labels,
 			"selected_idx": 0,
-			"chars": chars
+			"chars":        chars
 		})
 
 func _on_wordlock_char_selected(col_idx: int, char_idx: int):
 	var col: Dictionary = wordlock_columns[col_idx]
 
-	# Deselect the previously highlighted label
-	col["labels"][col["selected_idx"]].add_theme_color_override("font_color", Color.WHITE)
+	# Restore normal style on previously selected tile
+	var prev_btn: Button = col["labels"][col["selected_idx"]]
+	_apply_wordlock_btn_style(prev_btn, _make_wordlock_tile_style(false))
 
-	# Highlight the newly selected label
-	col["labels"][char_idx].add_theme_color_override("font_color", COLOR_WORDLOCK_SELECTED)
+	# Apply selected style to newly chosen tile
+	var new_btn: Button = col["labels"][char_idx]
+	_apply_wordlock_btn_style(new_btn, _make_wordlock_tile_style(true))
+
 	col["selected_idx"] = char_idx
 	wordlock_selected_chars[col_idx] = col["chars"][char_idx].to_lower()
-
-	# Smooth scroll so the selected char is centred in the clip
-	# Formula: charlist.y = -char_idx * LABEL_H  (top padding accounts for offset)
-	var target_y := float(-char_idx * WORDLOCK_LABEL_H)
-	var tween := create_tween()
-	tween.tween_property(col["charlist"], "position:y", target_y, 0.25) \
-		.set_trans(Tween.TRANS_SINE) \
-		.set_ease(Tween.EASE_OUT)
 
 func _open_mcq(options: Array):
 	message.text = "Choose the correct answer"
