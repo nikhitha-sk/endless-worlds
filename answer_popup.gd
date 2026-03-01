@@ -490,7 +490,7 @@ func _build_wordlock_columns():
 	for col_idx in word.length():
 		var correct_char := word[col_idx]
 
-		var count := randi_range(5, 8)
+		var count := randi_range(2, 4)
 		var chars: Array[String] = [correct_char]
 		while chars.size() < count:
 			var c := alphabet[randi() % alphabet.length()]
