@@ -47,6 +47,22 @@ var whack_active := false
 
 @onready var fill_container: VBoxContainer = $Panel/VBoxContainer/FillContainer
 @onready var answer_input: LineEdit = $Panel/VBoxContainer/FillContainer/AnswerInput
+@onready var wordlock_container: HBoxContainer = $Panel/VBoxContainer/WordLockContainer
+
+# WordLock constants
+const WORDLOCK_LABEL_H := 60
+const WORDLOCK_COL_W  := 70
+const WORDLOCK_COL_SEP := 8   # tile separation inside each column VBox
+const WORDLOCK_CLIP_H  := 468  # visible viewport height (7 tiles: 7×60 + 6×8)
+const WORDLOCK_FONT = preload("res://Jersey10-Regular.ttf")
+# WordLock colour palette
+const WORDLOCK_ACTIVE_BG    := Color(0.294, 0.0,   0.510)        # #4B0082 deep indigo
+const WORDLOCK_INACTIVE_BG  := Color(0.800, 0.800, 1.0  )        # #CCCCFF light lavender
+const WORDLOCK_GLOW_COLOR   := Color(0.471, 0.318, 0.663)        # #7851A9 medium purple
+const WORDLOCK_INACTIVE_FONT := Color(0.294, 0.0,  0.510)        # dark indigo on lavender bg
+
+var wordlock_columns: Array = []
+var wordlock_selected_chars: Array = []
 
 
 var correct_answer := ""
@@ -67,6 +83,9 @@ func _hide_all_popups():
 	
 	# Hide whack-a-mole
 	whack_container.visible = false
+	
+	# Hide word lock
+	wordlock_container.visible = false
 	
 	# NEW: Hide custom keyboard by default
 	if keyboard:
@@ -222,6 +241,8 @@ func open(solution: String, options: Array, heart_system: HeartSystem, map, ques
 			_open_wordle()
 		Global.QuestionType.WHACK:
 			_open_whack(options, solution)
+		Global.QuestionType.WORD_LOCK:
+			_open_wordlock()
 
 func _open_whack(options: Array, solution: String):
 	whack_container.visible = true
@@ -426,6 +447,135 @@ func _build_wordle_grid():
 			row_boxes.append(panel)
 		boxes.append(row_boxes)
 		
+func _apply_wordlock_btn_style(btn: Button, style: StyleBoxFlat) -> void:
+	btn.add_theme_stylebox_override("normal",  style)
+	btn.add_theme_stylebox_override("hover",   style)
+	btn.add_theme_stylebox_override("pressed", style)
+
+func _make_wordlock_tile_style(selected: bool) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.corner_radius_top_left    = 12
+	s.corner_radius_top_right   = 12
+	s.corner_radius_bottom_right = 12
+	s.corner_radius_bottom_left  = 12
+	if selected:
+		s.bg_color     = WORDLOCK_ACTIVE_BG
+		s.border_width_left   = 3
+		s.border_width_top    = 3
+		s.border_width_right  = 3
+		s.border_width_bottom = 3
+		s.border_color  = WORDLOCK_GLOW_COLOR
+		s.shadow_color  = Color(WORDLOCK_GLOW_COLOR.r, WORDLOCK_GLOW_COLOR.g, WORDLOCK_GLOW_COLOR.b, 0.85)
+		s.shadow_size   = 8
+	else:
+		s.bg_color     = WORDLOCK_INACTIVE_BG
+		s.shadow_color = Color(WORDLOCK_GLOW_COLOR.r, WORDLOCK_GLOW_COLOR.g, WORDLOCK_GLOW_COLOR.b, 0.30)
+		s.shadow_size  = 3
+	return s
+
+func _open_wordlock():
+	message.text = "Select the correct characters"
+	wordlock_container.visible = true
+	_build_wordlock_columns()
+
+func _build_wordlock_columns():
+	for child in wordlock_container.get_children():
+		child.queue_free()
+	wordlock_columns.clear()
+	wordlock_selected_chars.clear()
+
+	var word := correct_answer.to_upper()
+	var alphabet := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	for col_idx in word.length():
+		var correct_char := word[col_idx]
+
+		var count := randi_range(2, 4)
+		var chars: Array[String] = [correct_char]
+		while chars.size() < count:
+			var c := alphabet[randi() % alphabet.length()]
+			if not chars.has(c):
+				chars.append(c)
+		chars.shuffle()
+
+		# Clip container — defines the visible scroll viewport
+		var clip := Control.new()
+		clip.clip_contents = true
+		clip.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_CLIP_H)
+
+		# VBoxContainer scrolled inside the clip
+		var col_box := VBoxContainer.new()
+		col_box.add_theme_constant_override("separation", WORDLOCK_COL_SEP)
+		clip.add_child(col_box)
+
+		# Top padding: 3 tile-slots so tile 0 centres at row 4 (viewport middle)
+		var pad_top := Control.new()
+		pad_top.custom_minimum_size = Vector2(WORDLOCK_COL_W, (WORDLOCK_CLIP_H - WORDLOCK_LABEL_H) / 2 - WORDLOCK_COL_SEP)
+		col_box.add_child(pad_top)
+
+		var char_labels: Array = []
+		for i in chars.size():
+			var btn := Button.new()
+			btn.text = chars[i]
+			btn.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_LABEL_H)
+			btn.focus_mode = Control.FOCUS_NONE
+			btn.add_theme_font_size_override("font_size", 30)
+			btn.add_theme_font_override("font", WORDLOCK_FONT)
+			var font_col := Color.WHITE if i == 0 else WORDLOCK_INACTIVE_FONT
+			btn.add_theme_color_override("font_color",         font_col)
+			btn.add_theme_color_override("font_hover_color",   font_col)
+			btn.add_theme_color_override("font_pressed_color", font_col)
+			var style := _make_wordlock_tile_style(i == 0)
+			_apply_wordlock_btn_style(btn, style)
+			btn.pressed.connect(_on_wordlock_char_selected.bind(col_idx, i))
+			col_box.add_child(btn)
+			char_labels.append(btn)
+
+		# Bottom padding: symmetric with top so the last tile can also be centred
+		var pad_bot := Control.new()
+		pad_bot.custom_minimum_size = Vector2(WORDLOCK_COL_W, (WORDLOCK_CLIP_H - WORDLOCK_LABEL_H) / 2)
+		col_box.add_child(pad_bot)
+
+		wordlock_container.add_child(clip)
+		wordlock_selected_chars.append(chars[0].to_lower())
+		wordlock_columns.append({
+			"charlist":     col_box,
+			"labels":       char_labels,
+			"selected_idx": 0,
+			"chars":        chars
+		})
+
+func _on_wordlock_char_selected(col_idx: int, char_idx: int):
+	var col: Dictionary = wordlock_columns[col_idx]
+
+	# Restore normal style + dark font on previously selected tile
+	var prev_btn: Button = col["labels"][col["selected_idx"]]
+	_apply_wordlock_btn_style(prev_btn, _make_wordlock_tile_style(false))
+	var inactive_font := WORDLOCK_INACTIVE_FONT
+	prev_btn.add_theme_color_override("font_color",         inactive_font)
+	prev_btn.add_theme_color_override("font_hover_color",   inactive_font)
+	prev_btn.add_theme_color_override("font_pressed_color", inactive_font)
+
+	# Apply selected style + white font to newly chosen tile
+	var new_btn: Button = col["labels"][char_idx]
+	_apply_wordlock_btn_style(new_btn, _make_wordlock_tile_style(true))
+	new_btn.add_theme_color_override("font_color",         Color.WHITE)
+	new_btn.add_theme_color_override("font_hover_color",   Color.WHITE)
+	new_btn.add_theme_color_override("font_pressed_color", Color.WHITE)
+
+	col["selected_idx"] = char_idx
+	wordlock_selected_chars[col_idx] = col["chars"][char_idx].to_lower()
+
+	# Smooth scroll: tween VBox.y so the selected tile centres at row 4 (CLIP_H/2).
+	# pad_top = (CLIP_H-LABEL_H)/2 - SEP, so tile i centre = pad_top + SEP + i*(LABEL_H+SEP) + LABEL_H/2
+	#                                                        = CLIP_H/2 - i*(LABEL_H+SEP).
+	# Setting VBox.y = -(i*(LABEL_H+SEP)) places that centre at CLIP_H/2 (the viewport centre).
+	var target_y := float(-char_idx * (WORDLOCK_LABEL_H + WORDLOCK_COL_SEP))
+	var tween := create_tween()
+	tween.tween_property(col["charlist"], "position:y", target_y, 0.25) \
+		.set_trans(Tween.TRANS_SINE) \
+		.set_ease(Tween.EASE_OUT)
+
 func _open_mcq(options: Array):
 	message.text = "Choose the correct answer"
 
@@ -498,6 +648,10 @@ func _on_submit():
 			
 			# You already have this! We just need to call it.
 			_evaluate_word()
+		
+		Global.QuestionType.WORD_LOCK:
+			user_answer = "".join(wordlock_selected_chars)
+			_process_standard_answer(user_answer)
 
 # Helper to handle the logic for MCQ and Fill-in-blank
 func _process_standard_answer(user_answer: String):
