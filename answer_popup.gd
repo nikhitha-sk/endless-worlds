@@ -508,9 +508,9 @@ func _build_wordlock_columns():
 		col_box.add_theme_constant_override("separation", WORDLOCK_COL_SEP)
 		clip.add_child(col_box)
 
-		# Top padding so tile 0 can be centered in the viewport
+		# Top padding: 3 tile-slots so tile 0 centres at row 4 (viewport middle)
 		var pad_top := Control.new()
-		pad_top.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_LABEL_H)
+		pad_top.custom_minimum_size = Vector2(WORDLOCK_COL_W, (WORDLOCK_CLIP_H - WORDLOCK_LABEL_H) / 2 - WORDLOCK_COL_SEP)
 		col_box.add_child(pad_top)
 
 		var char_labels: Array = []
@@ -531,9 +531,9 @@ func _build_wordlock_columns():
 			col_box.add_child(btn)
 			char_labels.append(btn)
 
-		# Bottom padding so the last tile can also be centered
+		# Bottom padding: symmetric with top so the last tile can also be centred
 		var pad_bot := Control.new()
-		pad_bot.custom_minimum_size = Vector2(WORDLOCK_COL_W, WORDLOCK_LABEL_H)
+		pad_bot.custom_minimum_size = Vector2(WORDLOCK_COL_W, (WORDLOCK_CLIP_H - WORDLOCK_LABEL_H) / 2)
 		col_box.add_child(pad_bot)
 
 		wordlock_container.add_child(clip)
@@ -566,9 +566,10 @@ func _on_wordlock_char_selected(col_idx: int, char_idx: int):
 	col["selected_idx"] = char_idx
 	wordlock_selected_chars[col_idx] = col["chars"][char_idx].to_lower()
 
-	# Smooth scroll: tween VBox.y so the selected tile centres in the clip viewport.
-	# The top padding equals LABEL_H, so tile i's centre sits at (LABEL_H + i*(LABEL_H+SEP) + LABEL_H/2).
-	# Setting VBox.y = -(i*(LABEL_H+SEP)) shifts that centre to CLIP_H/2 (the viewport centre).
+	# Smooth scroll: tween VBox.y so the selected tile centres at row 4 (CLIP_H/2).
+	# pad_top = (CLIP_H-LABEL_H)/2 - SEP, so tile i centre = pad_top + SEP + i*(LABEL_H+SEP) + LABEL_H/2
+	#                                                        = CLIP_H/2 - i*(LABEL_H+SEP).
+	# Setting VBox.y = -(i*(LABEL_H+SEP)) places that centre at CLIP_H/2 (the viewport centre).
 	var target_y := float(-char_idx * (WORDLOCK_LABEL_H + WORDLOCK_COL_SEP))
 	var tween := create_tween()
 	tween.tween_property(col["charlist"], "position:y", target_y, 0.25) \
