@@ -1009,7 +1009,7 @@ func _kbc_use_fifty_fifty():
 			wrong_indices.append(i)
 
 	wrong_indices.shuffle()
-	var to_hide := wrong_indices.slice(0, 2)  # Hide 2 wrong options
+	var to_hide := wrong_indices.slice(0, min(2, wrong_indices.size()))  # Hide 2 wrong options
 	for idx in to_hide:
 		var btn: Button = kbc_option_buttons[idx]
 		btn.disabled = true
@@ -1027,18 +1027,28 @@ func _kbc_use_audience_poll():
 	# Generate percentages — correct answer gets highest
 	var percentages := []
 	var correct_pct := randi_range(45, 70)
-	var remaining := 100 - correct_pct
+	var correct_idx := -1
+	var wrong_count := 0
 	for i in kbc_current_options.size():
 		if kbc_current_options[i].to_lower() == correct_answer:
+			correct_idx = i
+		else:
+			wrong_count += 1
+	var remaining := 100 - correct_pct
+	for i in kbc_current_options.size():
+		if i == correct_idx:
 			percentages.append(correct_pct)
 		else:
-			var p := randi_range(3, max(5, remaining - 6))
-			remaining -= p
-			if remaining < 0:
-				p += remaining
+			wrong_count -= 1
+			if wrong_count == 0:
+				# Last wrong option gets all remaining
+				percentages.append(remaining)
 				remaining = 0
-			percentages.append(p)
-	# Adjust to ensure total is 100
+			else:
+				var p := clampi(randi_range(3, max(5, remaining / (wrong_count + 1))), 1, remaining - wrong_count)
+				percentages.append(p)
+				remaining -= p
+	# Safety: ensure total is exactly 100
 	var total := 0
 	for p in percentages:
 		total += p
