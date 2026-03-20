@@ -29,6 +29,8 @@ const BORDER_COLOR   := Color(0.35, 0.45, 0.9, 1.0)  # stroke color
 const CHAR_DELAY     := 0.045              # seconds per character
 const DONE_WAIT      := 5.0               # seconds bubble stays after happy anim
 const FONT_PATH      := "res://Jersey10-Regular.ttf"
+const JUMP_HEIGHT    := 30.0              # pixels the bot rises on a click-jump
+const JUMP_DURATION  := 0.18             # seconds for each half of the jump arc
 
 # Animation names match the spritesheet rows
 const ANIM_IDLE     := "idle"
@@ -52,6 +54,7 @@ var _elapsed    := 0.0
 var _done_timer := 0.0
 var _frame_w    := 0.0
 var _frame_h    := 0.0
+var _jumping    := false   # true while a click-jump tween is running
 
 
 # ==============================================================
@@ -114,6 +117,33 @@ func _process(delta: float) -> void:
 # ==============================================================
 # Internals
 # ==============================================================
+func _input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mb := event as InputEventMouseButton
+	if mb.button_index != MOUSE_BUTTON_LEFT or not mb.pressed:
+		return
+	# Hit-test: is the click inside the bot sprite's bounding rect?
+	var half_w := _frame_w * BOT_SCALE.x * 0.5
+	var half_h := _frame_h * BOT_SCALE.y * 0.5
+	var bot_rect := Rect2(_bot.position - Vector2(half_w, half_h), Vector2(half_w * 2.0, half_h * 2.0))
+	if bot_rect.has_point(mb.position):
+		_jump()
+
+
+func _jump() -> void:
+	if _jumping:
+		return
+	_jumping = true
+	var origin_y := _bot.position.y
+	var tw := create_tween()
+	tw.tween_property(_bot, "position:y", origin_y - JUMP_HEIGHT, JUMP_DURATION)\
+		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(_bot, "position:y", origin_y, JUMP_DURATION)\
+		.set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+	tw.tween_callback(func() -> void: _jumping = false)
+
+
 func _hide_bubble() -> void:
 	_state = _State.IDLE
 	var tw := create_tween()
