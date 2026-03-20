@@ -15,15 +15,17 @@ class_name AgenticBot
 #   waving → thinking → talking (+ typewriter) → happy → idle
 # ============================================================
 
-const COLS       := 6
-const ROWS       := 5
-const BOT_SCALE  := Vector2(0.6, 0.6)
-const MARGIN     := Vector2(14, 14)    # padding from screen edges
-const BUBBLE_W   := 220.0
-const BUBBLE_H   := 110.0
-const CHAR_DELAY := 0.045              # seconds per character
-const DONE_WAIT  := 5.0               # seconds bubble stays after happy anim
-const FONT_PATH  := "res://Jersey10-Regular.ttf"
+const COLS          := 6
+const ROWS          := 5
+const BOT_SCALE     := Vector2(1.2, 1.2)  # doubled from 0.6
+const MARGIN        := Vector2(14, 14)    # padding from screen edges
+const CLOCK_RESERVE := 130.0             # pixels reserved for the clock at bottom-right
+const BUBBLE_W      := 260.0
+const BUBBLE_H      := 130.0
+const BUBBLE_ALPHA  := 0.70              # speech bubble background opacity
+const CHAR_DELAY    := 0.045              # seconds per character
+const DONE_WAIT     := 5.0               # seconds bubble stays after happy anim
+const FONT_PATH     := "res://Jersey10-Regular.ttf"
 
 # Animation names match the spritesheet rows
 const ANIM_IDLE     := "idle"
@@ -121,9 +123,9 @@ func _layout() -> void:
 	var bw := _frame_w * BOT_SCALE.x
 	var bh := _frame_h * BOT_SCALE.y
 
-	# Bot sits in the bottom-right corner
+	# Bot sits to the left of the clock (bottom-right corner)
 	_bot.position = Vector2(
-		vp.x - MARGIN.x - bw * 0.5,
+		vp.x - MARGIN.x - CLOCK_RESERVE - bw * 0.5,
 		vp.y - MARGIN.y - bh * 0.5
 	)
 
@@ -171,7 +173,7 @@ func _build_sprite(bot_tex: Texture2D, fw: float, fh: float) -> void:
 
 func _build_bubble() -> void:
 	var style := StyleBoxFlat.new()
-	style.bg_color                   = Color(1.0, 1.0, 1.0, 0.93)
+	style.bg_color                   = Color(1.0, 1.0, 1.0, BUBBLE_ALPHA)
 	style.corner_radius_top_left     = 12
 	style.corner_radius_top_right    = 12
 	style.corner_radius_bottom_right = 12
@@ -196,7 +198,7 @@ func _build_bubble() -> void:
 	_label.offset_bottom = -10
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.add_theme_font_override("font", load(FONT_PATH))
-	_label.add_theme_font_size_override("font_size", 17)
+	_label.add_theme_font_size_override("font_size", 22)
 	_label.add_theme_color_override("font_color", Color(0.1, 0.1, 0.35))
 	_bubble.add_child(_label)
 
