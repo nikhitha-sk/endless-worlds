@@ -1,168 +1,259 @@
-# FEATURE
+# 🌍 Endless Worlds
 
-## Project Summary
-
-**Endless Worlds** is an educational 2D top-down exploration game built in **Godot** that combines environmental gameplay with AI-powered learning. Players navigate a procedurally-generated island world while solving AI-generated riddles and programming-focused educational challenges. The game leverages the **Groq API (LLM integration)** to dynamically create context-specific riddles about user-selected topics like programming, mathematics, or other subjects.
-
-The core gameplay loop involves exploring a tile-based world with varied terrain (grass, dirt, clay, water, lava), collecting hint pickups scattered across the map, and answering riddles to progress through levels. The game features a complete day–night cycle that dynamically adjusts world lighting and spawns decorative elements like flowers and trees.
-
-Environmental immersion includes weather systems (rain with parallax effects), water mechanics where players can wade and sink visually, and interactive NPCs like wells that provide context.
-
-Score and progression tracking motivate players through a level-based system with high score persistence. The educational component is deeply integrated—every interaction reinforces learning through gamification. The project emphasizes visual polish with proper depth sorting, sprite animations, particle effects, and responsive controls supporting both keyboard and gamepad input.
+**Endless Worlds** is a 2D educational adventure game built with **Godot 4**. You explore a procedurally generated island world, collect hints, and answer AI-powered riddles to earn points and level up. The game uses a real AI (Groq LLM) to create fresh questions on any topic you choose — making every run a unique learning experience.
 
 ---
 
-## Feature List
+## Table of Contents
 
-### Core Gameplay
-- **2D Top-Down Exploration:** Free-roaming player movement across procedurally-generated islands  
-- **Procedural World Generation:** Simplex noise-based terrain with connected islands, water borders, and varied biomes  
-- **Tile-Based World:** Multiple terrain types (grass, dirt, clay, mud, sand, lava, magma, water)  
-- **Character Movement:** Walking/sprinting with dynamic speed adjustments  
-- **Water Physics:** Depth-based visual sinking, movement slowdown in water, splash particle effects  
-
----
-
-### Educational & AI Features
-- **AI-Generated Riddles:** Integration with Groq LLM API for dynamic, context-aware riddle generation  
-- **Topic Selection:** User-selectable learning topics (default: programming)  
-- **Progressive Difficulty:** Level-based progression system tied to riddle solutions  
-- **Hint System:** Collectible hint pickups scattered on the map to aid riddle solving  
-- **Fallback Riddles:** 6 pre-written programming riddles as LLM fallback  
-- **Answer Validation:** Case-insensitive answer checking with immediate feedback  
+1. [What is this game?](#what-is-this-game)
+2. [How to Play](#how-to-play)
+3. [How It Works](#how-it-works)
+4. [Features](#features)
+5. [Question Types](#question-types)
+6. [AI and Riddle System](#ai-and-riddle-system)
+7. [The Learning Journal](#the-learning-journal)
+8. [The Agentic Bot](#the-agentic-bot)
+9. [Controls](#controls)
+10. [Technical Overview](#technical-overview)
+11. [Setup and Configuration](#setup-and-configuration)
 
 ---
 
-### Environment & Atmosphere
-- **Day-Night Cycle:** Dynamic time progression with color transitions between day/night states  
-- **Dynamic Lighting:** Automatic lighting adjustments at dawn, day, dusk, and night  
-- **Weather System:** Rain particle effects with parallax (far/near layers) and intensity transitions  
-- **Decorative Spawners:**  
-  - Random flower placement on grass tiles with varied textures and rotations  
-  - Tree spawning system  
-- **Depth Sorting:** Foot-based Z-indexing for proper sprite layering without performance lag  
+## What is this game?
+
+Endless Worlds turns learning into an adventure. Instead of sitting through a quiz, you walk around a living island — dodging lava, wading through water, watching fireflies at night — while collecting clues and answering questions about a topic **you choose**.
+
+The AI generates a new riddle every time you play. Collect hint pickups hidden across the map to unlock clues, then walk up to the **well** and submit your answer. Get it right and you level up. Run out of hearts and the run ends, sending you back to the home screen with your score saved.
 
 ---
 
-### Player Progression
-- **Score System:** Dynamic scoring with answer bonuses (50 points per riddle)  
-- **Level Progression:** Level advancement on correct answers  
-- **High Score Tracking:** Persistent high score across sessions  
-- **Home Screen:** Main menu with score display, high score, current level, and topic input  
+## How to Play
+
+1. **Start the game** — you land on the Home Screen.
+2. **Type a topic** in the text box (e.g. `python`, `history`, `space`, `cricket`). Leave it blank and it defaults to `programming`.
+3. Press **Start** — the world generates and a riddle is created by the AI.
+4. **Explore** the island to find glowing hint pickups. Each one you collect unlocks the next hint for your riddle.
+5. Walk up to the **well** and press the interaction key to open the answer popup.
+6. Answer the question correctly to earn **+50 points** and advance to the next level.
+7. Avoid **lava** and **magma** — they drain your hearts. Staying too long in **water** consumes air bubbles and eventually damages you too.
+8. Lose all hearts and you are sent back to the Home Screen. Your high score is saved automatically.
 
 ---
 
-### Interactive Elements
-- **Interactive Well:** NPC-like structures in the world  
-- **Hint Pickups:** Collectable items with minimum spacing to prevent clustering  
-- **Answer Popup UI:** Focused input interface for riddle answers with submit/close functionality  
+## How It Works
+
+Here is the flow from start to finish:
+
+```
+Home Screen
+   |
+   +-- Player types a topic and presses Start
+   |
+   +--> Map Scene loads
+          |
+          +-- World generates procedurally (Simplex noise)
+          +-- AI picks a subtopic and searches the web for context
+          +-- Groq LLM generates a riddle + 4 options + 4 hints + a fun fact
+          +-- Hint pickups are scattered around the map
+          |
+          +-- Player explores, collects hints (bot reads them out loud)
+          +-- Player answers at the well --> popup appears
+          |
+          +-- Correct answer --> +50 score, next level, new riddle generated
+          +-- Wrong answer --> lose a heart; try again
+                |
+                +--> 0 hearts --> death screen --> back to Home Screen
+```
 
 ---
 
-### Controls & Input
-- **Keyboard Support:** WASD for movement, arrow keys as fallback  
-- **Gamepad Support:** D-pad and analog stick compatible  
-- **Sprint Mechanic:** Shift key for speed boost  
-- **Virtual Joystick:** On-screen UI joystick for mobile/touch compatibility  
+## Features
 
----
+### World and Environment
+
+| Feature | Description |
+|---|---|
+| Procedural generation | Every game creates a new island using Simplex noise |
+| Tile types | Grass, Dirt, Clay, Mud, Sand, Lava, Magma, Water — each with different effects |
+| Day/Night cycle | The world transitions through dawn, day, dusk, and night automatically |
+| Dynamic lighting | Brightness and color shift based on the time of day; lava tiles glow at night |
+| Weather | Rain falls with a parallax effect (near and far layers); one world variant has snow |
+| Decorations | Flowers and trees are randomly placed on grass tiles each run |
+| Fireflies | Appear at night and add to the atmosphere |
+
+### Education and AI
+
+| Feature | Description |
+|---|---|
+| AI riddle generation | Groq LLM creates a unique question every run based on your chosen topic |
+| Web-grounded questions | The AI searches the web (via Serper.dev) before generating, so questions are current and relevant |
+| Any topic | Type anything — programming, maths, geography, cooking, film — the AI adapts |
+| Adaptive difficulty | A reinforcement learning model adjusts difficulty (Very Easy to Very Hard) based on your win/loss history |
+| Hint system | Collect up to 4 hints by picking up glowing items on the map |
+| Fallback riddles | If the AI or internet is unavailable, pre-written fallback riddles are used |
+
+### Player and Survival
+
+| Feature | Description |
+|---|---|
+| Heart system | 5 hearts; displayed top-right with animated heart icons |
+| Lava/Magma damage | Walking on these tiles deals 1 heart of damage every 2 seconds |
+| Water drowning | You have 5 air bubbles in water; when they run out you start losing hearts |
+| Camera shake | The screen shakes every time you take damage |
+| Death screen | A blurred overlay appears with a message, your score, and the correct answer |
+
+### Progression and Scores
+
+| Feature | Description |
+|---|---|
+| Score | +50 points per correct answer; displayed live on the map |
+| High score | Persists between sessions |
+| Level | Increases with each correct answer |
+| Lifetime stats | Tracks total games, wins, losses, hints used, best level, play time, and per-topic records |
+| Reset | You can wipe all stats from the Stats panel on the Home Screen |
 
 ### Visual Polish
-- **Animated Sprites:** Frame-based character animations for directional movement  
-- **Sprite Tinting:** Color modulation in water with depth-based blue tinting  
-- **Particle Effects:** Water bubbles, rain, weather visuals  
-- **UI Polish:** Custom fonts (Jersey10, Noto Color Emoji), opacity controls  
-- **Parallax Effects:** Multi-layer rain rendering for depth perception  
+
+| Feature | Description |
+|---|---|
+| Animated player | Frame-based directional walk animations |
+| Water tinting | Player sprite gets a blue tint and visually sinks when in water |
+| Particle effects | Water bubbles, rain particles, splash effects |
+| Custom fonts | Jersey10 pixel font and Noto Color Emoji for emoji characters |
+| Screen blur shader | Death overlay uses a GLSL blur shader |
+| Smooth tweens | UI elements (hearts, death screen, bot bubble) animate in and out smoothly |
 
 ---
 
-### Technical Features
-- **Environment File Loading:** `.env` file support for API key management  
-- **HTTP Requests:** Async LLM API calls via `HTTPRequest` nodes  
-- **Global Autoload:** Persistent game state management via Global singleton  
-- **Modular Architecture:** Separate scripts for systems (time, weather, spawning, player physics)  
-- **Scene Management:** Proper scene transitions (Home → Map → Home loop)  
+## Question Types
+
+Every game randomly picks one of six question formats:
+
+| Type | How you answer |
+|---|---|
+| **MCQ** (Multiple Choice) | Pick A, B, C, or D from four options |
+| **Fill in the Blank** | Type the answer in a text box |
+| **Wordle** | Guess the answer letter by letter (green = correct spot, yellow = wrong spot, grey = not in word) |
+| **Whack-a-Mole** | Click the correct answer when it pops up in a mole grid before time runs out |
+| **Word Lock** | Scroll columns of letters to spell out the correct word |
+| **KBC** (Kaun Banega Crorepati style) | Multiple choice with three lifelines: 50:50 (removes two wrong answers), Audience Poll, and Phone a Friend — each lifeline costs 2 hearts |
 
 ---
 
-## ADDITIONAL FEATURES
+## AI and Riddle System
 
-### 1. Concept Card UI
-- After solving:
-  - Show concept name  
-  - Short explanation  
-  - Real-world example  
-- Save it in **Learning Journal**
+Here is what happens behind the scenes when a riddle is generated:
 
-### 2. Learning Journal
-Add a **Learning Journal UI** that stores everything learned.
+1. **Topic resolution** — The AI takes your topic and picks one of five related subtopics to focus on (e.g. "python" might become "list comprehensions").
+2. **Web search** — Serper.dev searches Google for quiz content on that subtopic.
+3. **Web scraping** — The top result is fetched and the visible text is extracted (HTML tags are stripped).
+4. **LLM call** — The extracted text (up to 5,000 characters) is sent to Groq with a prompt asking for a question, 4 options, 1 correct answer, 4 hints, and a fun fact — all returned as JSON.
+5. **Fallback** — If any step fails (no API key, network error, bad response), a pre-written riddle is used instead.
 
-**What it contains:**
-- Solved riddles  
-- Learned concepts  
-- Definitions  
-- Diagrams (later)  
+The fact extracted from the riddle is automatically saved to your **Learning Journal** as a concept.
 
 ---
 
-### 3. Wrong Answer Feedback
-- Show why it’s wrong  
-- Give guided hint  
+## The Learning Journal
+
+The Learning Journal is a book-style popup you can open from the Home Screen using the **Journal** button in the top-right corner. It has three tabs:
+
+- **Solved Riddles** — Every riddle you answered correctly, with the question, your answer, the topic, and the time.
+- **Concepts** — Facts and explanations pulled from the AI's response for each riddle.
+- **Fun Facts** — Facts the Agentic Bot shares with you during gameplay (drawn from your concept pool).
+
+Everything is saved automatically and persists between sessions.
 
 ---
 
-### 4. Hint Challenges
-- Timed riddles  
-- Logical puzzles  
-- Pattern recognition  
+## The Agentic Bot
+
+A small animated robot lives in the bottom-right corner of the game screen. It:
+
+- **Waves, thinks, then speaks** — when you collect a hint, the bot reads it out in a speech bubble with a typewriter effect.
+- **Shares facts every 2 minutes** — it picks a random concept or fun fact from your Learning Journal to keep you engaged.
+- **Reacts to you** — clicking the bot makes it jump.
+
+The bot cycles through five animations: idle, talking, thinking, happy, and waving.
 
 ---
 
-### 5. Learning Stats System
-Replace normal XP with **Learning Stats**.
+## Controls
 
-Each solved riddle:
-- `+2 Logic`
-- `+1 Memory`
-
-This makes learning measurable.
-
----
-
-### 6. Daily Learning Quests
-- “Riddle of the Day”  
-- “Concept of the Day”  
+| Action | Key / Input |
+|---|---|
+| Move | WASD or Arrow Keys |
+| Sprint | Left Shift |
+| Interact with well | Walk up to it (popup opens automatically) |
+| Virtual joystick | On-screen joystick (touch / mobile) |
+| Gamepad | D-pad or left analog stick |
 
 ---
 
-### 7. Accessibility
-Features that make the project stand out academically:
-- Simple language mode  
-- Audio hints (text-to-speech later)  
-- Highlight keywords  
-- Difficulty slider  
+## Technical Overview
+
+The project is built with **Godot 4.5** using **GDScript**. Here is how the code is organized:
+
+```
+endless-worlds/
++-- HomeScreen.gd / .tscn      — Main menu scene
++-- map/
+|   +-- map.gd                 — Core game scene: world setup, scoring, death, fact timer
+|   +-- world_generator.gd     — Simplex noise island generation
+|   +-- time_system.gd         — Day/night cycle
+|   +-- lighting_system.gd     — Dynamic lighting and lava lights
+|   +-- rain_system.gd         — Rain/snow particles
+|   +-- rain_controller.gd     — Weather intensity control
+|   +-- flower_spawner.gd      — Random flower placement
+|   +-- tree_spawner.gd        — Random tree placement
+|   +-- firefly_manager.gd     — Night firefly effects
++-- scripts/
+|   +-- utils/
+|   |   +-- Global.gd          — Autoload singleton: score, level, stats, journal, save/load
+|   |   +-- env_loader.gd      — Reads API keys from .env file
+|   +-- ui/
+|   |   +-- HeartSystem.gd     — Heart display, damage, camera shake
+|   |   +-- AgenticBot.gd      — Animated bot with speech bubble
+|   |   +-- LearningJournal.gd — Book-style journal popup (3 tabs)
+|   +-- riddleui/
+|       +-- RiddleUI.gd        — In-world riddle display and hint unlocking
+|       +-- HintBulb.gd        — Hint bulb icon
++-- ai/
+|   +-- DifficultyRL.gd        — Q-learning model for adaptive difficulty
++-- answer_popup.gd / .tscn    — All 6 question-type UIs in one popup
++-- gemini_riddle.gd           — AI pipeline: topic resolve -> web search -> scrape -> LLM call
++-- player.gd                  — Player movement, animations, water/tile effects
++-- tasks.gd                   — Hint pickup spawning and collection
++-- HintPickup.gd / .tscn      — Individual hint item in the world
++-- well.gd                    — Interactive well that opens the answer popup
+```
+
+**Key autoloads (always active):**
+- `Global` — game state, stats, journal, save/load
+- `DifficultyRl` — adaptive difficulty model
+- `env_loader` — API key loading
+
+**Persistence files** (stored in the Godot user data directory):
+- `save.json` — score, high score, level, stats, selected topic, learning journal
+- `difficulty_rl.json` — the Q-table for the adaptive difficulty model
 
 ---
 
-### 8. Personalization
-Collect player data:
-- Time to solve  
-- Hints used  
-- Wrong attempts  
-- Areas explored  
+## Setup and Configuration
 
-Use it to adjust:
-- Riddle difficulty  
-- Number of hints  
-- Time limits  
-- Topics to be focused on  
+1. **Clone or download** the project.
+2. Open it in **Godot 4.5** (or later).
+3. Create a `.env` file in the project root with your API keys:
 
----
+```
+GROQ_API_KEY=your_groq_api_key_here
+SERPER_API_KEY=your_serper_api_key_here
+```
 
-### 9. Computer Vision
-*(Planned feature)*
+- Get a free Groq API key at https://console.groq.com
+- Get a Serper API key at https://serper.dev (used for web search to ground riddles in real content)
 
----
+4. Press **F5** (or click Run) in Godot to start the game.
 
-### 10. Leaderboard
-Global and/or local leaderboard system
+> **No API keys?** The game still works — it falls back to a set of built-in programming riddles automatically.
