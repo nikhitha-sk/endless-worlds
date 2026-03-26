@@ -249,10 +249,15 @@ func _build_bubble() -> void:
 	_bubble.add_child(hbox)
 
 	# Image (hidden until speak_with_image is called)
+	# EXPAND_IGNORE keeps the rect at exactly IMG_SIZE; SIZE_SHRINK prevents
+	# the HBoxContainer from stretching it beyond that.
 	_img_rect = TextureRect.new()
-	_img_rect.custom_minimum_size = Vector2(IMG_SIZE, IMG_SIZE)
-	_img_rect.expand_mode         = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
-	_img_rect.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_img_rect.custom_minimum_size    = Vector2(IMG_SIZE, IMG_SIZE)
+	_img_rect.size_flags_horizontal  = Control.SIZE_SHRINK_BEGIN
+	_img_rect.size_flags_vertical    = Control.SIZE_SHRINK_CENTER
+	_img_rect.expand_mode            = TextureRect.EXPAND_IGNORE
+	_img_rect.stretch_mode           = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_img_rect.clip_contents          = true
 	_img_rect.visible = false
 	hbox.add_child(_img_rect)
 
