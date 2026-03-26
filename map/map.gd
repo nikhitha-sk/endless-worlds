@@ -22,6 +22,12 @@ extends Node2D
 
 var agentic_bot: AgenticBot
 
+# ---- Pexels image fetching ----
+var _http_pexels_search: HTTPRequest
+var _http_pexels_image: HTTPRequest
+var _pending_fact: String = ""
+var _pending_description: String = ""
+
 var current_solution: String = ""
 var current_options: Array = []   # ✅ ADD THIS
 var current_question: String = ""
@@ -129,6 +135,8 @@ func _ready():
 	# 🤖 AGENTIC BOT
 	agentic_bot = AgenticBot.new()
 	add_child(agentic_bot)
+
+	_setup_pexels_http()
 
 	joystick.modulate.a = 0.3
 
@@ -462,4 +470,73 @@ func _on_fact_timer_timeout() -> void:
 	var fact: String = candidates[randi() % candidates.size()]
 	_last_fact_spoken = fact
 	Global.add_fact_to_journal(fact)
-	agentic_bot.speak(fact)
+
+	# Fetch a Pexels image for the topic, then speak with image
+	_pending_fact = fact
+	_fetch_pexels_image(Global.selected_topic)
+
+# ==================================================
+# PEXELS IMAGE FETCHING
+# ==================================================
+func _setup_pexels_http() -> void:
+	_http_pexels_search = HTTPRequest.new()
+	add_child(_http_pexels_search)
+	_http_pexels_search.request_completed.connect(_on_pexels_search_response)
+
+	_http_pexels_image = HTTPRequest.new()
+	add_child(_http_pexels_image)
+	_http_pexels_image.request_completed.connect(_on_pexels_image_response)
+
+func _fetch_pexels_image(query: String) -> void:
+	var env := EnvLoader.load_env("res://.env")
+	var api_key: String = env.get("PEXELS_API_KEY", "")
+	if api_key.is_empty():
+		agentic_bot.speak(_pending_fact)
+		return
+
+	var url := "https://api.pexels.com/v1/search?query=%s&per_page=1" % query.uri_encode()
+	var headers: PackedStringArray = ["Authorization: %s" % api_key]
+	var err := _http_pexels_search.request(url, headers, HTTPClient.METHOD_GET)
+	if err != OK:
+		agentic_bot.speak(_pending_fact)
+
+func _on_pexels_search_response(_result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if code != 200:
+		agentic_bot.speak(_pending_fact)
+		return
+	var json := JSON.new()
+	if json.parse(body.get_string_from_utf8()) != OK:
+		agentic_bot.speak(_pending_fact)
+		return
+	var data: Dictionary = json.get_data()
+	var photos: Array = data.get("photos", [])
+	if photos.is_empty():
+		agentic_bot.speak(_pending_fact)
+		return
+	var photo: Dictionary = photos[0]
+	_pending_description = photo.get("alt", "")
+	var image_url: String = photo.get("src", {}).get("tiny", "")
+	if image_url.is_empty():
+		push_warning("[Map] Pexels photo has no 'tiny' URL; falling back to text-only.")
+		agentic_bot.speak(_pending_fact)
+		return
+	var err := _http_pexels_image.request(image_url)
+	if err != OK:
+		agentic_bot.speak(_pending_fact)
+
+func _on_pexels_image_response(_result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if code != 200 or body.is_empty():
+		agentic_bot.speak(_pending_fact)
+		return
+	var image := Image.new()
+	# Pexels tiny images are typically JPEG; fall back to PNG then WebP
+	var err := image.load_jpg_from_buffer(body)
+	if err != OK:
+		err = image.load_png_from_buffer(body)
+	if err != OK:
+		err = image.load_webp_from_buffer(body)
+	if err != OK:
+		agentic_bot.speak(_pending_fact)
+		return
+	var texture := ImageTexture.create_from_image(image)
+	agentic_bot.speak_with_image(_pending_fact, _pending_description, texture)
