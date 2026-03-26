@@ -20,8 +20,9 @@ const ROWS           := 5
 const BOT_SCALE      := Vector2(1.2, 1.2)  # doubled from 0.6
 const MARGIN         := Vector2(14, 14)    # padding from screen edges
 const CLOCK_RESERVE  := 130.0             # pixels reserved for the clock at bottom-right
-const BUBBLE_W       := 260.0
-const BUBBLE_H       := 130.0
+const BUBBLE_W       := 320.0
+const BUBBLE_H       := 150.0
+const IMG_SIZE       := 90.0              # square size for the Pexels image
 const BUBBLE_ALPHA   := 0.70              # speech bubble background opacity
 const BUBBLE_BORDER  := 2                 # border width (px)
 const BUBBLE_COLOR   := Color(1.0, 1.0, 1.0, 0.70)   # fill, matches BUBBLE_ALPHA
@@ -45,6 +46,8 @@ enum _State { IDLE, GREETING, THINKING, SPEAKING, CELEBRATING, DONE }
 var _bot: AnimatedSprite2D
 var _bubble: Panel
 var _label: Label
+var _img_rect: TextureRect
+var _desc_label: Label
 
 # ---- state ----
 var _state: _State = _State.IDLE
@@ -76,12 +79,24 @@ func _ready() -> void:
 # Public API
 # ==============================================================
 func speak(text: String) -> void:
+	speak_with_image(text, "", null)
+
+
+# Speak with an optional Pexels image and a short description.
+func speak_with_image(fact_text: String, description: String, image_texture: Texture2D) -> void:
 	# If already mid-sequence, reset cleanly
-	_full_text    = text
+	_full_text    = fact_text
 	_chars_shown  = 0
 	_elapsed      = 0.0
 	_done_timer   = 0.0
 	_state        = _State.GREETING
+
+	# Show / hide image elements
+	var has_image: bool = image_texture != null
+	_img_rect.texture = image_texture
+	_img_rect.visible = has_image
+	_desc_label.text  = description
+	_desc_label.visible = has_image and not description.is_empty()
 
 	_label.text        = ""
 	_bubble.modulate.a = 0.0
@@ -223,17 +238,51 @@ func _build_bubble() -> void:
 	_bubble.modulate.a = 0.0
 	add_child(_bubble)
 
+	# Horizontal layout: image on the left, text column on the right
+	var hbox := HBoxContainer.new()
+	hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hbox.offset_left   = 8
+	hbox.offset_top    = 8
+	hbox.offset_right  = -8
+	hbox.offset_bottom = -8
+	hbox.add_theme_constant_override("separation", 8)
+	_bubble.add_child(hbox)
+
+	# Image (hidden until speak_with_image is called)
+	# EXPAND_IGNORE keeps the rect at exactly IMG_SIZE; SIZE_SHRINK prevents
+	# the HBoxContainer from stretching it beyond that.
+	_img_rect = TextureRect.new()
+	_img_rect.custom_minimum_size    = Vector2(IMG_SIZE, IMG_SIZE)
+	_img_rect.size_flags_horizontal  = Control.SIZE_SHRINK_BEGIN
+	_img_rect.size_flags_vertical    = Control.SIZE_SHRINK_CENTER
+	_img_rect.expand_mode            = TextureRect.EXPAND_KEEP_SIZE
+	_img_rect.stretch_mode           = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_img_rect.clip_contents          = true
+	_img_rect.visible = false
+	hbox.add_child(_img_rect)
+
+	# Right column: description (small) on top + fun-fact (typewriter) below
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 4)
+	hbox.add_child(vbox)
+
+	_desc_label = Label.new()
+	_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_desc_label.add_theme_font_override("font", load(FONT_PATH))
+	_desc_label.add_theme_font_size_override("font_size", 16)
+	_desc_label.add_theme_color_override("font_color", Color(0.3, 0.3, 0.55))
+	_desc_label.visible = false
+	vbox.add_child(_desc_label)
+
 	_label = Label.new()
-	_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_label.offset_left   = 10
-	_label.offset_top    = 10
-	_label.offset_right  = -10
-	_label.offset_bottom = -10
+	_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_label.add_theme_font_override("font", load(FONT_PATH))
 	_label.add_theme_font_size_override("font_size", 22)
 	_label.add_theme_color_override("font_color", Color(0.1, 0.1, 0.35))
-	_bubble.add_child(_label)
+	vbox.add_child(_label)
 
 
 # ==============================================================
