@@ -255,7 +255,7 @@ func _build_bubble() -> void:
 	_img_rect.custom_minimum_size    = Vector2(IMG_SIZE, IMG_SIZE)
 	_img_rect.size_flags_horizontal  = Control.SIZE_SHRINK_BEGIN
 	_img_rect.size_flags_vertical    = Control.SIZE_SHRINK_CENTER
-	_img_rect.expand_mode            = TextureRect.EXPAND_IGNORE
+	_img_rect.expand_mode            = TextureRect.EXPAND_KEEP_SIZE
 	_img_rect.stretch_mode           = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_img_rect.clip_contents          = true
 	_img_rect.visible = false
