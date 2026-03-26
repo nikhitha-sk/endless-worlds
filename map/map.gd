@@ -266,7 +266,7 @@ func create_bubble_ui():
 		var bubble := TextureRect.new()
 		bubble.texture = preload("res://assets/ui/bubble.png")
 		bubble.custom_minimum_size = Vector2(40, 40)
-		bubble.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bubble.expand_mode = TextureRect.EXPAND_KEEP_SIZE
 		bubble.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 		bubble_container.add_child(bubble)
 

@@ -36,7 +36,7 @@ func create_hearts_ui():
 		var heart := TextureRect.new()
 		heart.texture = heart_full
 		heart.custom_minimum_size = Vector2(heart_size, heart_size)
-		heart.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		heart.expand_mode = TextureRect.EXPAND_KEEP_SIZE
 		heart.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 		heart.modulate = Color(1, 1, 1, 0.8)
 		hearts_container.add_child(heart)
