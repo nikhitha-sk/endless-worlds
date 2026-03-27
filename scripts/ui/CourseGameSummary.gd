@@ -26,6 +26,10 @@ const FINAL_BG   := Color(0.02, 0.02, 0.06, 0.97)
 const PANEL_W    := 700.0
 const PANEL_H    := 530.0
 
+# 15-step flicker pattern at 90 ms/step (~1.35 s total), resolves to steady-on.
+# false = hidden, true = visible, creating a dramatic glitch reveal.
+const GLITCH_PATTERN := [false, true, false, false, true, false, true, false, false, true, false, true, false, true, true]
+
 var _overlay: ColorRect
 var _panel:   Panel
 var _is_final: bool = false
@@ -267,7 +271,7 @@ func _animate_close_then(callback: Callable) -> void:
 
 # Glitch effect: rapid visibility flickers that resolve to steady-on.
 func _animate_glitch(target: Control) -> void:
-	var pattern := [false, true, false, false, true, false, true, false, false, true, false, true, false, true, true]
+	var pattern := GLITCH_PATTERN
 	var idx := 0
 	var timer := Timer.new()
 	timer.wait_time = 0.09

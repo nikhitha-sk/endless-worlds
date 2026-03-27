@@ -462,17 +462,20 @@ func _on_fact_timer_timeout() -> void:
 	if agentic_bot == null:
 		return
 
-	var current_topic := Global.selected_topic.to_lower()
+	# Normalise once; fall back to "general" so comparisons always have a value
+	var raw_topic := Global.selected_topic.strip_edges()
+	var topic_key := raw_topic.to_lower() if not raw_topic.is_empty() else "general"
+	var topic_cap := raw_topic.capitalize() if not raw_topic.is_empty() else "this topic"
 
 	# Build a pool from journal entries that match the current topic
 	var pool: Array = []
 	for entry in Global.learning_journal.get("concepts", []):
-		if entry.get("topic", "").to_lower() == current_topic:
+		if entry.get("topic", "").to_lower() == topic_key:
 			var txt: String = entry.get("definition", entry.get("name", ""))
 			if not txt.is_empty():
 				pool.append("📚 Did you know? " + txt)
 	for entry in Global.learning_journal.get("fun_facts", []):
-		if entry.get("topic", "").to_lower() == current_topic:
+		if entry.get("topic", "").to_lower() == topic_key:
 			var txt: String = entry.get("text", "")
 			if not txt.is_empty():
 				pool.append("✨ Fun fact: " + txt)
@@ -480,7 +483,6 @@ func _on_fact_timer_timeout() -> void:
 	# Fallback: topic-focused motivational messages (not stored in journal)
 	var use_fallback := pool.is_empty()
 	if use_fallback:
-		var topic_cap: String = Global.selected_topic.capitalize()
 		pool = [
 			"🎓 You're exploring %s today! Find the well to answer a question." % topic_cap,
 			"🔍 Collect hints across the map to help solve the %s riddle!" % topic_cap,
