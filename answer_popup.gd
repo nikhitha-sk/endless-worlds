@@ -765,10 +765,16 @@ func _handle_victory_shared():
 	Global.next_level()
 	# Store solved riddle in Learning Journal
 	Global.add_riddle_to_journal(current_question, correct_answer)
-	Global.show_journal_on_home = true
 	await get_tree().create_timer(1.5).timeout
 	close()
-	get_tree().change_scene_to_file("res://HomeScreen.tscn")
+	if Global.is_course_mode:
+		Global.course_store_round_result(current_question, correct_answer, true)
+		var summary := CourseGameSummary.new()
+		map_ref.add_child(summary)
+		summary.open()
+	else:
+		Global.show_journal_on_home = true
+		get_tree().change_scene_to_file("res://HomeScreen.tscn")
 
 func _handle_wrong_shared():
 	if has_node("../DifficultyRL"):
@@ -823,10 +829,16 @@ func _kbc_process_answer(user_answer: String):
 		Global.next_level()
 		# Store solved riddle in Learning Journal
 		Global.add_riddle_to_journal(current_question, correct_answer)
-		Global.show_journal_on_home = true
 		await get_tree().create_timer(2.5).timeout
 		close()
-		get_tree().change_scene_to_file("res://HomeScreen.tscn")
+		if Global.is_course_mode:
+			Global.course_store_round_result(current_question, correct_answer, true)
+			var summary := CourseGameSummary.new()
+			map_ref.add_child(summary)
+			summary.open()
+		else:
+			Global.show_journal_on_home = true
+			get_tree().change_scene_to_file("res://HomeScreen.tscn")
 	else:
 		kbc_wrong_answer_player.play()
 		if has_node("../DifficultyRL"):
@@ -1652,8 +1664,14 @@ func _wordle_victory():
 	Global.next_level()
 	# Store solved riddle in Learning Journal
 	Global.add_riddle_to_journal(current_question, correct_answer)
-	Global.show_journal_on_home = true
 
 	await get_tree().create_timer(1.5).timeout
 	close()
-	get_tree().change_scene_to_file("res://HomeScreen.tscn")
+	if Global.is_course_mode:
+		Global.course_store_round_result(current_question, correct_answer, true)
+		var summary := CourseGameSummary.new()
+		map_ref.add_child(summary)
+		summary.open()
+	else:
+		Global.show_journal_on_home = true
+		get_tree().change_scene_to_file("res://HomeScreen.tscn")

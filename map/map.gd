@@ -77,7 +77,11 @@ var tile_damage_timer: Timer
 # ==================================================
 func _ready():
 	Global.start_game()
-	Global.current_question_type = Global.QuestionType.values().pick_random()
+	# In course mode use the pre-assigned type for this round; otherwise pick randomly
+	if Global.is_course_mode and Global.course_current_game < Global.course_round_types.size():
+		Global.current_question_type = Global.course_round_types[Global.course_current_game] as Global.QuestionType
+	else:
+		Global.current_question_type = Global.QuestionType.values().pick_random()
 	#Global.current_question_type=Global.QuestionType.KBC
 	# 🔧 APPLY SETTINGS
 	rain.rain_enabled = enable_rain
@@ -135,6 +139,10 @@ func _ready():
 	# ⏱ Random fact timer – every 2 minutes the bot shares a fact
 	_start_fact_timer()
 
+	# 📋 Course mode: snapshot concept/fact counts so we know what was learned in this game
+	if Global.is_course_mode:
+		Global.course_game_started()
+
 func _on_well_interacted():
 	if current_options.is_empty():
 		push_error("❌ No MCQ options available")
@@ -157,6 +165,11 @@ func _on_riddle_generated(data: Dictionary) -> void:
 	var fact_ref: String = str(data.get("fact_reference", "")).strip_edges()
 	if not fact_ref.is_empty():
 		Global.add_concept_to_journal(fact_ref)
+		# Keep the explanation for the post-round summary
+		Global.course_last_fact_reference = fact_ref
+		# Speak the fact now — it is guaranteed to be about the current topic
+		if agentic_bot != null:
+			agentic_bot.speak("📚 Did you know? " + fact_ref)
 
 	riddle_ui.setup_riddle(data)
 
@@ -370,7 +383,13 @@ func _on_player_died():
 	if not is_inside_tree():
 		return # Stop if the node is already detached
 	var messages = ["💙 You tried your best!", "🌊 The world was tough today!", "🔥 Nice run, adventurer!", "✨ You'll do even better next time!"]
-	death_label.text = "%s\nScore: %d\nSolution was %s" % [messages.pick_random(), Global.score,current_solution] 
+
+	if Global.is_course_mode:
+		# In course mode: show a brief message, then transition to the course summary
+		death_label.text = "%s\nSolution was: %s" % [messages.pick_random(), current_solution]
+	else:
+		death_label.text = "%s\nScore: %d\nSolution was %s" % [messages.pick_random(), Global.score, current_solution]
+
 	death_overlay.visible = true
 	death_bg.modulate.a = 0.0
 	death_label.modulate.a = 0.0
@@ -378,10 +397,18 @@ func _on_player_died():
 	tween.tween_property(death_bg, "modulate:a", 0.65, 0.4)
 	tween.parallel().tween_property(death_label, "modulate:a", 1.0, 0.4)
 	Global.reset_score_only()
-	await get_tree().create_timer(5.0).timeout
-	
+	var death_wait := 3.0 if Global.is_course_mode else 5.0
+	await get_tree().create_timer(death_wait).timeout
+
 	Global.end_game(false)
-	get_tree().change_scene_to_file("res://HomeScreen.tscn")
+
+	if Global.is_course_mode:
+		Global.course_store_round_result(current_question, current_solution, false)
+		var summary := CourseGameSummary.new()
+		add_child(summary)
+		summary.open()
+	else:
+		get_tree().change_scene_to_file("res://HomeScreen.tscn")
 
 func create_death_overlay():
 	death_overlay = CanvasLayer.new()
@@ -434,32 +461,43 @@ func _on_fact_timer_timeout() -> void:
 	if agentic_bot == null:
 		return
 
-	# Build a pool: concepts + fun_facts already in the journal
+	# Normalise once; fall back to "general" so comparisons always have a value
+	var raw_topic := Global.selected_topic.strip_edges()
+	var topic_key := raw_topic.to_lower() if not raw_topic.is_empty() else "general"
+	var topic_cap := raw_topic.capitalize() if not raw_topic.is_empty() else "this topic"
+
+	# Build a pool from journal entries that match the current topic
 	var pool: Array = []
 	for entry in Global.learning_journal.get("concepts", []):
-		var txt: String = entry.get("definition", entry.get("name", ""))
-		if not txt.is_empty():
-			pool.append("📚 Did you know? " + txt)
+		if entry.get("topic", "").to_lower() == topic_key:
+			var txt: String = entry.get("definition", entry.get("name", ""))
+			if not txt.is_empty():
+				pool.append("📚 Did you know? " + txt)
 	for entry in Global.learning_journal.get("fun_facts", []):
-		var txt: String = entry.get("text", "")
-		if not txt.is_empty():
-			pool.append("✨ Fun fact: " + txt)
+		if entry.get("topic", "").to_lower() == topic_key:
+			var txt: String = entry.get("text", "")
+			if not txt.is_empty():
+				pool.append("✨ Fun fact: " + txt)
 
-	# If journal is empty, use a generic motivational message
-	if pool.is_empty():
-		var topic: String = Global.selected_topic.capitalize()
+	# Fallback: topic-focused motivational messages (not stored in journal)
+	var use_fallback := pool.is_empty()
+	if use_fallback:
 		pool = [
-			"Keep exploring! Every question you answer teaches you something new about " + topic + ".",
-			"Collect hints by exploring the world — they'll help you solve the riddle!",
-			"Your Learning Journal grows every time you answer a question. Check it on the home screen! 📖",
+			"🎓 You're exploring %s today! Find the well to answer a question." % topic_cap,
+			"🔍 Collect hints across the map to help solve the %s riddle!" % topic_cap,
+			"📖 Every correct answer grows your %s knowledge — keep going!" % topic_cap,
 		]
 
-	# Avoid repeating the same fact consecutively when pool has more than one entry
+	# Avoid repeating the same fact consecutively
 	var candidates: Array = pool.filter(func(f): return f != _last_fact_spoken)
 	if candidates.is_empty():
 		candidates = pool
 
 	var fact: String = candidates[randi() % candidates.size()]
 	_last_fact_spoken = fact
-	Global.add_fact_to_journal(fact)
+
+	# Only persist actual topic facts to the journal, not generic prompts
+	if not use_fallback:
+		Global.add_fact_to_journal(fact)
+
 	agentic_bot.speak(fact)

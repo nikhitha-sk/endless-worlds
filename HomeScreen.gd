@@ -15,6 +15,7 @@ extends Control
 
 var selected_topic: String = ""
 var _journal_button: Button
+var _course_button: Button
 
 func _ready():
 	score_label.text = "⭐ Score: %d" % Global.score
@@ -31,6 +32,7 @@ func _ready():
 	joystick_ui.modulate.a = 0.3
 
 	_create_journal_button()
+	_create_course_button()
 
 	# Auto-open journal if flagged after game end
 	if Global.show_journal_on_home:
@@ -87,6 +89,63 @@ func _create_journal_button() -> void:
 	_journal_button.z_index = 10
 	_journal_button.pressed.connect(_open_journal)
 	$JoyStickUI.add_child(_journal_button)
+
+
+func _create_course_button() -> void:
+	_course_button = Button.new()
+	_course_button.text = "🎓 Course"
+	_course_button.add_theme_font_override("font", load("res://Jersey10-Regular.ttf"))
+	_course_button.add_theme_font_size_override("font_size", 30)
+	_course_button.add_theme_color_override("font_color", Color(0.4, 0.85, 1.0, 1.0))
+	_course_button.add_theme_color_override("font_hover_color", Color(0.7, 1.0, 1.0, 1.0))
+	_course_button.add_theme_color_override("font_pressed_color", Color(0.2, 0.65, 0.9, 1.0))
+
+	var sb_normal := StyleBoxFlat.new()
+	sb_normal.bg_color = Color(0.05, 0.12, 0.28, 0.80)
+	sb_normal.corner_radius_top_left = 10
+	sb_normal.corner_radius_top_right = 10
+	sb_normal.corner_radius_bottom_left = 10
+	sb_normal.corner_radius_bottom_right = 10
+	sb_normal.border_width_left = 2
+	sb_normal.border_width_top = 2
+	sb_normal.border_width_right = 2
+	sb_normal.border_width_bottom = 2
+	sb_normal.border_color = Color(0.3, 0.6, 1.0, 0.9)
+	_course_button.add_theme_stylebox_override("normal", sb_normal)
+
+	var sb_hover := StyleBoxFlat.new()
+	sb_hover.bg_color = Color(0.10, 0.20, 0.40, 0.95)
+	sb_hover.corner_radius_top_left = 10
+	sb_hover.corner_radius_top_right = 10
+	sb_hover.corner_radius_bottom_left = 10
+	sb_hover.corner_radius_bottom_right = 10
+	sb_hover.border_width_left = 2
+	sb_hover.border_width_top = 2
+	sb_hover.border_width_right = 2
+	sb_hover.border_width_bottom = 2
+	sb_hover.border_color = Color(0.5, 0.85, 1.0, 1.0)
+	_course_button.add_theme_stylebox_override("hover", sb_hover)
+	_course_button.add_theme_stylebox_override("pressed", sb_hover)
+
+	_course_button.focus_mode = Control.FOCUS_NONE
+
+	const BTN_W := 160.0
+	const BTN_H := 40.0
+	const MARGIN := 10.0
+	var vp_w := get_viewport().get_visible_rect().size.x
+	# Place the Course button to the left of the Journal button
+	_course_button.custom_minimum_size = Vector2(BTN_W, BTN_H)
+	_course_button.size = Vector2(BTN_W, BTN_H)
+	_course_button.position = Vector2(vp_w - 170.0 - BTN_W - MARGIN * 2.5, MARGIN)
+	_course_button.z_index = 10
+	_course_button.pressed.connect(_open_course_setup)
+	$JoyStickUI.add_child(_course_button)
+
+
+func _open_course_setup() -> void:
+	var setup := CourseSetup.new()
+	add_child(setup)
+	setup.open()
 
 
 func _open_journal() -> void:
