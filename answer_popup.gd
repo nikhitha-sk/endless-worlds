@@ -768,8 +768,8 @@ func _handle_victory_shared():
 	await get_tree().create_timer(1.5).timeout
 	close()
 	if Global.is_course_mode:
+		Global.course_store_round_result(current_question, correct_answer, true)
 		var summary := CourseGameSummary.new()
-		summary.setup(Global.get_course_game_concepts(), Global.get_course_game_facts())
 		map_ref.add_child(summary)
 		summary.open()
 	else:
@@ -832,8 +832,8 @@ func _kbc_process_answer(user_answer: String):
 		await get_tree().create_timer(2.5).timeout
 		close()
 		if Global.is_course_mode:
+			Global.course_store_round_result(current_question, correct_answer, true)
 			var summary := CourseGameSummary.new()
-			summary.setup(Global.get_course_game_concepts(), Global.get_course_game_facts())
 			map_ref.add_child(summary)
 			summary.open()
 		else:
@@ -1668,8 +1668,8 @@ func _wordle_victory():
 	await get_tree().create_timer(1.5).timeout
 	close()
 	if Global.is_course_mode:
+		Global.course_store_round_result(current_question, correct_answer, true)
 		var summary := CourseGameSummary.new()
-		summary.setup(Global.get_course_game_concepts(), Global.get_course_game_facts())
 		map_ref.add_child(summary)
 		summary.open()
 	else:

@@ -157,23 +157,61 @@ var course_topic: String = ""
 var course_game_start_concept_idx: int = 0
 var course_game_start_fact_idx: int = 0
 
+# Pre-assigned question types (one per round) ensuring each round feels unique
+var course_round_types: Array = []
+
+# Accumulated history of completed rounds:
+# [{round, question, answer, explanation, win, concepts, facts}]
+var course_round_history: Array = []
+
+# Explanation/fact from the most recent riddle (set by map.gd on riddle_generated)
+var course_last_fact_reference: String = ""
+
 func start_course(topic: String) -> void:
 	is_course_mode = true
 	course_current_game = 0
 	course_total_score = 0
 	course_topic = topic
 	selected_topic = topic
+	course_round_history.clear()
+	course_last_fact_reference = ""
 	reset_score()
+
+	# Build a shuffled list of unique question types, one per round
+	var all_types: Array = []
+	for t in QuestionType.values():
+		all_types.append(int(t))
+	all_types.shuffle()
+	# If fewer types than rounds, repeat the shuffled list
+	course_round_types.clear()
+	while course_round_types.size() < course_games_total:
+		for t in all_types:
+			if course_round_types.size() >= course_games_total:
+				break
+			course_round_types.append(t)
 
 func course_game_started() -> void:
 	course_game_start_concept_idx = learning_journal.concepts.size()
 	course_game_start_fact_idx = learning_journal.fun_facts.size()
+	course_last_fact_reference = ""
 
 func get_course_game_concepts() -> Array:
 	return learning_journal.concepts.slice(course_game_start_concept_idx, learning_journal.concepts.size())
 
 func get_course_game_facts() -> Array:
 	return learning_journal.fun_facts.slice(course_game_start_fact_idx, learning_journal.fun_facts.size())
+
+# Store the just-finished round's data into history (call BEFORE course_advance()).
+func course_store_round_result(question: String, answer: String, win: bool) -> void:
+	course_round_history.append({
+		"round": course_current_game + 1,
+		"question": question,
+		"answer": answer,
+		"explanation": course_last_fact_reference,
+		"win": win,
+		"concepts": get_course_game_concepts().duplicate(),
+		"facts": get_course_game_facts().duplicate()
+	})
 
 # Call after each course game ends.  Returns true if more games remain.
 func course_advance() -> bool:

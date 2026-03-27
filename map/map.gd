@@ -77,7 +77,11 @@ var tile_damage_timer: Timer
 # ==================================================
 func _ready():
 	Global.start_game()
-	Global.current_question_type = Global.QuestionType.values().pick_random()
+	# In course mode use the pre-assigned type for this round; otherwise pick randomly
+	if Global.is_course_mode and Global.course_current_game < Global.course_round_types.size():
+		Global.current_question_type = Global.course_round_types[Global.course_current_game] as Global.QuestionType
+	else:
+		Global.current_question_type = Global.QuestionType.values().pick_random()
 	#Global.current_question_type=Global.QuestionType.KBC
 	# 🔧 APPLY SETTINGS
 	rain.rain_enabled = enable_rain
@@ -165,6 +169,8 @@ func _on_riddle_generated(data: Dictionary) -> void:
 	var fact_ref: String = str(data.get("fact_reference", "")).strip_edges()
 	if not fact_ref.is_empty():
 		Global.add_concept_to_journal(fact_ref)
+		# Keep the explanation for the post-round summary
+		Global.course_last_fact_reference = fact_ref
 
 	riddle_ui.setup_riddle(data)
 
@@ -398,8 +404,8 @@ func _on_player_died():
 	Global.end_game(false)
 
 	if Global.is_course_mode:
+		Global.course_store_round_result(current_question, current_solution, false)
 		var summary := CourseGameSummary.new()
-		summary.setup(Global.get_course_game_concepts(), Global.get_course_game_facts())
 		add_child(summary)
 		summary.open()
 	else:
@@ -456,32 +462,41 @@ func _on_fact_timer_timeout() -> void:
 	if agentic_bot == null:
 		return
 
-	# Build a pool: concepts + fun_facts already in the journal
+	var current_topic := Global.selected_topic.to_lower()
+
+	# Build a pool from journal entries that match the current topic
 	var pool: Array = []
 	for entry in Global.learning_journal.get("concepts", []):
-		var txt: String = entry.get("definition", entry.get("name", ""))
-		if not txt.is_empty():
-			pool.append("📚 Did you know? " + txt)
+		if entry.get("topic", "").to_lower() == current_topic:
+			var txt: String = entry.get("definition", entry.get("name", ""))
+			if not txt.is_empty():
+				pool.append("📚 Did you know? " + txt)
 	for entry in Global.learning_journal.get("fun_facts", []):
-		var txt: String = entry.get("text", "")
-		if not txt.is_empty():
-			pool.append("✨ Fun fact: " + txt)
+		if entry.get("topic", "").to_lower() == current_topic:
+			var txt: String = entry.get("text", "")
+			if not txt.is_empty():
+				pool.append("✨ Fun fact: " + txt)
 
-	# If journal is empty, use a generic motivational message
-	if pool.is_empty():
-		var topic: String = Global.selected_topic.capitalize()
+	# Fallback: topic-focused motivational messages (not stored in journal)
+	var use_fallback := pool.is_empty()
+	if use_fallback:
+		var topic_cap: String = Global.selected_topic.capitalize()
 		pool = [
-			"Keep exploring! Every question you answer teaches you something new about " + topic + ".",
-			"Collect hints by exploring the world — they'll help you solve the riddle!",
-			"Your Learning Journal grows every time you answer a question. Check it on the home screen! 📖",
+			"🎓 You're exploring %s today! Find the well to answer a question." % topic_cap,
+			"🔍 Collect hints across the map to help solve the %s riddle!" % topic_cap,
+			"📖 Every correct answer grows your %s knowledge — keep going!" % topic_cap,
 		]
 
-	# Avoid repeating the same fact consecutively when pool has more than one entry
+	# Avoid repeating the same fact consecutively
 	var candidates: Array = pool.filter(func(f): return f != _last_fact_spoken)
 	if candidates.is_empty():
 		candidates = pool
 
 	var fact: String = candidates[randi() % candidates.size()]
 	_last_fact_spoken = fact
-	Global.add_fact_to_journal(fact)
+
+	# Only persist actual topic facts to the journal, not generic prompts
+	if not use_fallback:
+		Global.add_fact_to_journal(fact)
+
 	agentic_bot.speak(fact)
