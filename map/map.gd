@@ -143,10 +143,6 @@ func _ready():
 	if Global.is_course_mode:
 		Global.course_game_started()
 
-	# Show the first fact immediately (after one frame so the bot is fully initialised)
-	await get_tree().process_frame
-	_on_fact_timer_timeout()
-
 func _on_well_interacted():
 	if current_options.is_empty():
 		push_error("❌ No MCQ options available")
@@ -171,6 +167,9 @@ func _on_riddle_generated(data: Dictionary) -> void:
 		Global.add_concept_to_journal(fact_ref)
 		# Keep the explanation for the post-round summary
 		Global.course_last_fact_reference = fact_ref
+		# Speak the fact now — it is guaranteed to be about the current topic
+		if agentic_bot != null:
+			agentic_bot.speak("📚 Did you know? " + fact_ref)
 
 	riddle_ui.setup_riddle(data)
 

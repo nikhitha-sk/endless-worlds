@@ -6,6 +6,25 @@ var resolved_search_topic: String = ""
 # ================= SCRAPING CONFIG =================
 const DEBUG_FILE: String = "user://debug_scrape.txt"
 
+# ================= VARIETY SYSTEM =================
+# Each round picks one angle at random so questions cover different facets of the topic.
+const QUESTION_ANGLES: Array[String] = [
+	"applications and real-world uses",
+	"history and evolution",
+	"common mistakes and misconceptions",
+	"advanced concepts and techniques",
+	"fundamental principles and basics",
+	"famous examples and case studies",
+	"tools and technologies",
+	"challenges and limitations",
+	"best practices",
+	"comparisons between variants",
+]
+
+var _question_angle: String = ""
+# Questions already answered in this course session (avoid repeats)
+var _previous_questions: Array = []
+
 # ================= FALLBACK RIDDLES =================
 const FALLBACK_RIDDLES: Array[Dictionary] = [
 	{
@@ -82,8 +101,18 @@ func generate_riddle() -> void:
 		current_difficulty = get_node("/root/Map/DifficultyRL").choose_difficulty()
 		
 	current_topic = Global.selected_topic if "selected_topic" in Global else "Programming"
+
+	# Pick a fresh random angle to drive variety across rounds
+	_question_angle = QUESTION_ANGLES[randi() % QUESTION_ANGLES.size()]
+
+	# Collect previously answered questions so the LLM avoids repeating them
+	_previous_questions.clear()
+	for entry in Global.course_round_history:
+		var q: String = entry.get("question", "").strip_edges()
+		if not q.is_empty():
+			_previous_questions.append(q)
 	
-	print("[GeminiRiddle] Requesting Riddle. Topic: %s | Difficulty: %s" % [current_topic, current_difficulty])
+	print("[GeminiRiddle] Requesting Riddle. Topic: %s | Angle: %s | Difficulty: %s" % [current_topic, _question_angle, current_difficulty])
 	add_log("Generating: %s (%s)" % [current_topic, current_difficulty])
 	# Start the scraping process
 	_resolve_topic_with_llm(current_topic)
@@ -100,23 +129,22 @@ func _resolve_topic_with_llm(topic: String) -> void:
 	
 	var prompt := """
 	You are a topic resolver.
-	Given a user topic, do the following:
-	1. Generate 5 related subtopics.
-	2. Randomly choose ONE subtopic.
-	
+	Given a user topic and a learning angle, generate 5 diverse subtopics that specifically relate to that angle, then randomly choose ONE subtopic.
+
+	Learning angle: "%s"
+	User topic: "%s"
+
 	Return STRICT JSON only:
 	{
 	  "general_topic": "string",
 	  "chosen_subtopic": "string"
 	}
-	
-	User topic: "%s"
-	""" % topic
+	""" % [_question_angle, topic]
 	
 	var body := {
 		"model": "openai/gpt-oss-120b",
 		"messages": [{"role": "user", "content": prompt}],
-		"temperature": 0.4,
+		"temperature": 0.9,
 		"response_format": {"type": "json_object"}
 	}
 	
@@ -154,9 +182,9 @@ func _scrape_universal(topic: String) -> void:
 		_handle_scrape_fallback("SERPER_API_KEY not found")
 		return
 	
-	# Prepare Serper API request
+	# Prepare Serper API request — include the learning angle for diverse results
 	var search_body := {
-		"q": "%s quiz questions and answers" % topic
+		"q": "%s about %s" % [topic, _question_angle]
 	}
 	
 	var headers: PackedStringArray = [
@@ -344,15 +372,21 @@ func _call_groq_api(web_data_param: String) -> void:
 	print("current topic is: ",current_topic)
 	var effective_topic := resolved_search_topic if not resolved_search_topic.is_empty() else current_topic
 	print("sub topic chosen by llm : ",effective_topic)
-	#add_log("current topic is: "+current_topic+"\nsub topic chosen by llm : "+effective_topic)
-	
+
+	# Build an exclusion block so the LLM avoids repeating prior questions
+	var avoid_block := ""
+	if not _previous_questions.is_empty():
+		avoid_block = "\nCRITICAL: Do NOT create a question similar to any of these already-asked questions:\n"
+		for q in _previous_questions:
+			avoid_block += "  - %s\n" % q
+
 	var prompt := """
 	SYSTEM: You are a technical question creator. You must follow the Task exactly as written, recheck the conditions  
 	CRITICAL: The "solution" MUST be exactly one of the items in the "options" array.
 	%s
 
 	TASK:
-	1. Create a question about "%s". %s
+	1. Create a question about "%s" from the learning angle: "%s". %s
 	2. The "solution" MUST be a single word.
 	3. Generate 4 "options" for the user to choose from.
 	4. CRITICAL: The "solution" MUST be exactly one of the items in the "options" array.
@@ -361,9 +395,9 @@ func _call_groq_api(web_data_param: String) -> void:
 	7. Topic is given by user so dont make answer as topic itself
 	8. insert a new line if the question is longer than 10 words
 	9. keep question length less than 50 words
-	10.keep the output logically correct
+	10. keep the output logically correct
 	11. if the topic is not academic related then question should be a riddle
-	
+	%s
 	OUTPUT STRICT JSON:
 	{
 	  "riddle": "string",
@@ -372,18 +406,14 @@ func _call_groq_api(web_data_param: String) -> void:
 	  "hints": ["hint1", "hint2", "hint3", "hint4"],
 	  "fact_reference": "Short sentence explaining the fact used",
 	  "source": "%s"
-	}""" % [source_context, effective_topic, web_data_condition, current_difficulty, source_type]
+	}""" % [source_context, effective_topic, _question_angle, web_data_condition, current_difficulty, avoid_block, source_type]
 	
 	print("[GeminiRiddle] Prompt length: %d characters" % prompt.length())
 	
 	var request_body := {
-		#"model": "llama-3.1-8b-instant",
-		#"model": "llama-3.3-70b-versatile",
 		"model": "openai/gpt-oss-120b",
-		
-		
 		"messages": [{"role": "user", "content": prompt}],
-		"temperature": 0.5,
+		"temperature": 0.9,
 		"response_format": {"type": "json_object"}
 	}
 	
