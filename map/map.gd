@@ -135,6 +135,14 @@ func _ready():
 	# ⏱ Random fact timer – every 2 minutes the bot shares a fact
 	_start_fact_timer()
 
+	# 📋 Course mode: snapshot concept/fact counts so we know what was learned in this game
+	if Global.is_course_mode:
+		Global.course_game_started()
+
+	# Show the first fact immediately (after one frame so the bot is fully initialised)
+	await get_tree().process_frame
+	_on_fact_timer_timeout()
+
 func _on_well_interacted():
 	if current_options.is_empty():
 		push_error("❌ No MCQ options available")
@@ -370,7 +378,13 @@ func _on_player_died():
 	if not is_inside_tree():
 		return # Stop if the node is already detached
 	var messages = ["💙 You tried your best!", "🌊 The world was tough today!", "🔥 Nice run, adventurer!", "✨ You'll do even better next time!"]
-	death_label.text = "%s\nScore: %d\nSolution was %s" % [messages.pick_random(), Global.score,current_solution] 
+
+	if Global.is_course_mode:
+		# In course mode: show a brief message, then transition to the course summary
+		death_label.text = "%s\nSolution was: %s" % [messages.pick_random(), current_solution]
+	else:
+		death_label.text = "%s\nScore: %d\nSolution was %s" % [messages.pick_random(), Global.score, current_solution]
+
 	death_overlay.visible = true
 	death_bg.modulate.a = 0.0
 	death_label.modulate.a = 0.0
@@ -378,10 +392,17 @@ func _on_player_died():
 	tween.tween_property(death_bg, "modulate:a", 0.65, 0.4)
 	tween.parallel().tween_property(death_label, "modulate:a", 1.0, 0.4)
 	Global.reset_score_only()
-	await get_tree().create_timer(5.0).timeout
-	
+	await get_tree().create_timer(3.0).timeout
+
 	Global.end_game(false)
-	get_tree().change_scene_to_file("res://HomeScreen.tscn")
+
+	if Global.is_course_mode:
+		var summary := CourseGameSummary.new()
+		summary.setup(Global.get_course_game_concepts(), Global.get_course_game_facts())
+		add_child(summary)
+		summary.open()
+	else:
+		get_tree().change_scene_to_file("res://HomeScreen.tscn")
 
 func create_death_overlay():
 	death_overlay = CanvasLayer.new()

@@ -146,6 +146,44 @@ var current_hint_count := 0
 
 # ================= LEARNING JOURNAL =================
 var show_journal_on_home: bool = false
+var journal_font_index: int = 0   # 0 = Jersey10 pixel font, 1 = system font
+
+# ================= COURSE MODE =================
+var is_course_mode: bool = false
+var course_games_total: int = 5
+var course_current_game: int = 0   # 0-based index of the game being played
+var course_total_score: int = 0
+var course_topic: String = ""
+var course_game_start_concept_idx: int = 0
+var course_game_start_fact_idx: int = 0
+
+func start_course(topic: String) -> void:
+	is_course_mode = true
+	course_current_game = 0
+	course_total_score = 0
+	course_topic = topic
+	selected_topic = topic
+	reset_score()
+
+func course_game_started() -> void:
+	course_game_start_concept_idx = learning_journal.concepts.size()
+	course_game_start_fact_idx = learning_journal.fun_facts.size()
+
+func get_course_game_concepts() -> Array:
+	return learning_journal.concepts.slice(course_game_start_concept_idx)
+
+func get_course_game_facts() -> Array:
+	return learning_journal.fun_facts.slice(course_game_start_fact_idx)
+
+# Call after each course game ends.  Returns true if more games remain.
+func course_advance() -> bool:
+	course_total_score += score
+	course_current_game += 1
+	reset_score_only()
+	if course_current_game >= course_games_total:
+		is_course_mode = false
+		return false
+	return true
 
 var learning_journal := {
 	"solved_riddles": [],  # {question, answer, topic, timestamp}

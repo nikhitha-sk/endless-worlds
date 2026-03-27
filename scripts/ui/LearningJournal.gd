@@ -18,10 +18,19 @@ const ACCENT_COLOR     := Color(0.72, 0.40, 0.10, 1.0)   # gold-ish accent
 const TAB_ACTIVE       := Color(0.42, 0.22, 0.08, 1.0)
 const TAB_INACTIVE     := Color(0.64, 0.44, 0.22, 1.0)
 const LINE_COLOR       := Color(0.80, 0.72, 0.55, 1.0)
+const RECENT_CARD_BG   := Color(1.0, 0.95, 0.70, 1.0)    # warm highlight for newest entry
+const RECENT_BORDER    := Color(0.72, 0.40, 0.10, 1.0)   # gold border for newest entry
 
 const POPUP_W          := 820.0
 const POPUP_H          := 560.0
 const SPINE_W          := 38.0
+
+# ── font styles ──────────────────────────────────────────────────────────────
+# Journal font options. Index is stored in Global.journal_font_index.
+const FONT_STYLES := [
+	{ "label": "🔤 Pixel", "path": "res://Jersey10-Regular.ttf" },
+	{ "label": "🔡 Classic", "path": "" },  # empty path = default Godot theme font
+]
 
 # ── nodes ─────────────────────────────────────────────────────────────────────
 var _overlay: ColorRect
@@ -33,6 +42,7 @@ var _content_scroll: ScrollContainer
 var _content_vbox: VBoxContainer
 var _close_btn: Button
 var _title_label: Label
+var _font_btn: Button           # toggles font style
 
 var _current_tab: int = 0      # 0=Riddles 1=Concepts 2=Facts
 
@@ -125,6 +135,21 @@ func _build_ui() -> void:
 	_title_label.add_theme_color_override("font_color", ACCENT_COLOR)
 	_title_label.position = Vector2(12, 10)
 	cover_strip.add_child(_title_label)
+
+	# ── font style toggle button ──────────────────────────────────────────────
+	_font_btn = Button.new()
+	_font_btn.text = FONT_STYLES[Global.journal_font_index]["label"]
+	_font_btn.add_theme_font_override("font", load(FONT_PATH))
+	_font_btn.add_theme_font_size_override("font_size", 18)
+	_font_btn.add_theme_color_override("font_color", ACCENT_COLOR)
+	_font_btn.add_theme_stylebox_override("normal", _make_stylebox(Color(0, 0, 0, 0), 0))
+	_font_btn.add_theme_stylebox_override("hover", _make_stylebox(Color(1, 1, 1, 0.15), 4))
+	_font_btn.add_theme_stylebox_override("pressed", _make_stylebox(Color(1, 1, 1, 0.25), 4))
+	_font_btn.focus_mode = Control.FOCUS_NONE
+	_font_btn.custom_minimum_size = Vector2(90, 36)
+	_font_btn.position = Vector2(POPUP_W - 144, 8)
+	_font_btn.pressed.connect(_toggle_font)
+	cover_strip.add_child(_font_btn)
 
 	# ── close button ──────────────────────────────────────────────────────────
 	_close_btn = Button.new()
@@ -224,11 +249,16 @@ func _populate_riddles() -> void:
 		_add_empty_message("No solved riddles yet.\nGo answer some questions to fill this page! 🏆")
 		return
 
-	for entry in riddles:
+	# Show newest entries first
+	var reversed_riddles := riddles.duplicate()
+	reversed_riddles.reverse()
+	var is_first := true
+	for entry in reversed_riddles:
 		var q: String = entry.get("question", "?")
 		var a: String = entry.get("answer", "?")
 		var t: String = entry.get("topic", "").capitalize()
-		_add_entry("✅ " + q, "Answer: " + a.capitalize() + ("   [" + t + "]" if not t.is_empty() else ""))
+		_add_entry("✅ " + q, "Answer: " + a.capitalize() + ("   [" + t + "]" if not t.is_empty() else ""), is_first)
+		is_first = false
 
 
 func _populate_concepts() -> void:
@@ -237,11 +267,16 @@ func _populate_concepts() -> void:
 		_add_empty_message("No concepts learned yet.\nConcepts are captured automatically when\nquestions load. Play a round to fill this page! 💡")
 		return
 
-	for entry in concepts:
+	# Show newest entries first
+	var reversed_concepts := concepts.duplicate()
+	reversed_concepts.reverse()
+	var is_first := true
+	for entry in reversed_concepts:
 		var name_str: String = entry.get("name", "")
 		var def_str: String  = entry.get("definition", name_str)
 		var topic: String    = entry.get("topic", "").capitalize()
-		_add_entry("💡 " + name_str + ("   [" + topic + "]" if not topic.is_empty() else ""), def_str)
+		_add_entry("💡 " + name_str + ("   [" + topic + "]" if not topic.is_empty() else ""), def_str, is_first)
+		is_first = false
 
 
 func _populate_facts() -> void:
@@ -250,21 +285,34 @@ func _populate_facts() -> void:
 		_add_empty_message("No fun facts collected yet.\nThe AI companion shares a fact every 2 minutes\nduring gameplay. Keep playing! ✨")
 		return
 
-	for entry in facts:
+	# Show newest entries first
+	var reversed_facts := facts.duplicate()
+	reversed_facts.reverse()
+	var is_first := true
+	for entry in reversed_facts:
 		var text: String  = entry.get("text", "")
 		var topic: String = entry.get("topic", "").capitalize()
-		_add_entry("✨ Fun Fact" + ("   [" + topic + "]" if not topic.is_empty() else ""), text)
+		_add_entry("✨ Fun Fact" + ("   [" + topic + "]" if not topic.is_empty() else ""), text, is_first)
+		is_first = false
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Entry Widgets
 # ═══════════════════════════════════════════════════════════════════════════════
-func _add_entry(heading: String, body: String) -> void:
+func _add_entry(heading: String, body: String, is_recent: bool = false) -> void:
 	# PanelContainer auto-sizes to its content height, preventing overlapping cards.
 	var card := PanelContainer.new()
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var card_sb := StyleBoxFlat.new()
-	card_sb.bg_color = Color(1.0, 0.97, 0.88, 0.9)
+	if is_recent:
+		card_sb.bg_color = RECENT_CARD_BG
+		card_sb.border_width_left   = 3
+		card_sb.border_width_top    = 3
+		card_sb.border_width_right  = 3
+		card_sb.border_width_bottom = 3
+		card_sb.border_color = RECENT_BORDER
+	else:
+		card_sb.bg_color = Color(1.0, 0.97, 0.88, 0.9)
 	card_sb.corner_radius_top_left     = 8
 	card_sb.corner_radius_top_right    = 8
 	card_sb.corner_radius_bottom_left  = 8
@@ -280,23 +328,35 @@ func _add_entry(heading: String, body: String) -> void:
 	vb.add_theme_constant_override("separation", 4)
 	card.add_child(vb)
 
+	# "NEW" badge for the most recent entry
+	if is_recent:
+		var badge := Label.new()
+		badge.text = "🆕 Most Recent"
+		badge.add_theme_font_size_override("font_size", 13)
+		badge.add_theme_color_override("font_color", ACCENT_COLOR)
+		if Global.journal_font_index == 0:
+			badge.add_theme_font_override("font", load(FONT_PATH))
+		vb.add_child(badge)
+
 	var h_lbl := Label.new()
 	h_lbl.text = heading
-	h_lbl.add_theme_font_override("font", load(FONT_PATH))
 	h_lbl.add_theme_font_size_override("font_size", 20)
 	h_lbl.add_theme_color_override("font_color", HEADER_COLOR)
 	h_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	h_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if Global.journal_font_index == 0:
+		h_lbl.add_theme_font_override("font", load(FONT_PATH))
 	vb.add_child(h_lbl)
 
 	if body != "" and body != heading:
 		var b_lbl := Label.new()
 		b_lbl.text = body
-		b_lbl.add_theme_font_override("font", load(FONT_PATH))
 		b_lbl.add_theme_font_size_override("font_size", 16)
 		b_lbl.add_theme_color_override("font_color", BODY_COLOR)
 		b_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if Global.journal_font_index == 0:
+			b_lbl.add_theme_font_override("font", load(FONT_PATH))
 		vb.add_child(b_lbl)
 
 	# Divider line below card — scrolls with the content as a "ruled paper" line
@@ -310,7 +370,8 @@ func _add_entry(heading: String, body: String) -> void:
 func _add_empty_message(msg: String) -> void:
 	var lbl := Label.new()
 	lbl.text = msg
-	lbl.add_theme_font_override("font", load(FONT_PATH))
+	if Global.journal_font_index == 0:
+		lbl.add_theme_font_override("font", load(FONT_PATH))
 	lbl.add_theme_font_size_override("font_size", 20)
 	lbl.add_theme_color_override("font_color", BODY_COLOR)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -352,6 +413,14 @@ func _animate_close() -> void:
 
 func _remove_self() -> void:
 	queue_free()
+
+
+# Cycle to the next font style and refresh the current tab content.
+func _toggle_font() -> void:
+	Global.journal_font_index = (Global.journal_font_index + 1) % FONT_STYLES.size()
+	if _font_btn:
+		_font_btn.text = FONT_STYLES[Global.journal_font_index]["label"]
+	_show_tab(_current_tab)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
