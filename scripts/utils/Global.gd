@@ -170,10 +170,10 @@ func course_game_started() -> void:
 	course_game_start_fact_idx = learning_journal.fun_facts.size()
 
 func get_course_game_concepts() -> Array:
-	return learning_journal.concepts.slice(course_game_start_concept_idx)
+	return learning_journal.concepts.slice(course_game_start_concept_idx, learning_journal.concepts.size())
 
 func get_course_game_facts() -> Array:
-	return learning_journal.fun_facts.slice(course_game_start_fact_idx)
+	return learning_journal.fun_facts.slice(course_game_start_fact_idx, learning_journal.fun_facts.size())
 
 # Call after each course game ends.  Returns true if more games remain.
 func course_advance() -> bool:

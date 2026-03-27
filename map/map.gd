@@ -392,7 +392,8 @@ func _on_player_died():
 	tween.tween_property(death_bg, "modulate:a", 0.65, 0.4)
 	tween.parallel().tween_property(death_label, "modulate:a", 1.0, 0.4)
 	Global.reset_score_only()
-	await get_tree().create_timer(3.0).timeout
+	var death_wait := 3.0 if Global.is_course_mode else 5.0
+	await get_tree().create_timer(death_wait).timeout
 
 	Global.end_game(false)
 
